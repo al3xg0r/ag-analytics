@@ -1,0 +1,26 @@
+name = "ag-analytics"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Static dashboard files (HTML/CSS/JS) served directly by the Worker
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# D1 database, created with: wrangler d1 create ag_analytics_db
+[[d1_databases]]
+binding = "DB"
+database_name = "ag_analytics_db"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# KV namespace, created with: wrangler kv namespace create CACHE
+[[kv_namespaces]]
+binding = "CACHE"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# Secrets (set with `wrangler secret put NAME`, never store real values here):
+#   JWT_SECRET      -> random 32+ character string, used to sign admin login tokens
+#   ADMIN_BOOTSTRAP -> one-time setup password, used only during the first admin creation
+[vars]
+APP_NAME = "AG Analytics"

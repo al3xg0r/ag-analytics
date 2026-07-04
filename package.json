@@ -1,0 +1,18 @@
+{
+  "name": "ag-analytics",
+  "version": "1.0.0",
+  "description": "Lightweight, privacy-first, serverless multi-site web analytics built entirely on Cloudflare",
+  "main": "src/index.js",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate:local": "wrangler d1 execute ag_analytics_db --local --file=./migrations/0001_init.sql",
+    "db:migrate:remote": "wrangler d1 execute ag_analytics_db --remote --file=./migrations/0001_init.sql",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}
