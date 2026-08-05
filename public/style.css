@@ -162,6 +162,11 @@ form > button[type="submit"] {
 
 .btn-ghost.small { font-size: 12px; padding: 6px 10px; }
 
+.btn-ghost.danger { color: var(--negative); }
+.btn-ghost.danger:hover { color: var(--negative); border-color: var(--negative); background: rgba(228, 87, 46, 0.08); }
+.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-ghost:disabled:hover { color: var(--text-muted); border-color: var(--border); background: var(--surface); }
+
 /* App shell */
 .app {
   display: grid;
@@ -196,6 +201,14 @@ form > button[type="submit"] {
   font-family: var(--font-mono);
   font-size: 13px;
 }
+
+.site-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.site-actions button { width: 100%; }
 
 .period-tabs { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .period-tabs button {

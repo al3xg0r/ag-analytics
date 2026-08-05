@@ -153,11 +153,33 @@ async function loadSites() {
   state.sites = sites;
   const select = document.getElementById("site-select");
   select.innerHTML = sites.map((s) => `<option value="${s.id}">${s.name}</option>`).join("");
-  if (sites.length > 0) {
-    state.currentSiteId = sites[0].id;
-    select.value = state.currentSiteId;
-    document.getElementById("site-name").textContent = sites[0].name;
+
+  const deleteButton = document.getElementById("btn-delete-site");
+
+  if (sites.length === 0) {
+    state.currentSiteId = null;
+    document.getElementById("site-name").textContent = "No sites yet";
+    deleteButton.disabled = true;
+    setContentVisible(false);
+    return;
   }
+
+  deleteButton.disabled = false;
+  setContentVisible(true);
+
+  // Keep the previously selected site if it still exists, otherwise fall back to the first one
+  const stillExists = state.currentSiteId && sites.some((s) => s.id === state.currentSiteId);
+  state.currentSiteId = stillExists ? state.currentSiteId : sites[0].id;
+  select.value = state.currentSiteId;
+  const current = sites.find((s) => s.id === state.currentSiteId);
+  document.getElementById("site-name").textContent = current ? current.name : "—";
+}
+
+// Hides the stat cards / chart / breakdown tables when there is nothing to show yet
+function setContentVisible(visible) {
+  document.querySelector(".stat-cards").classList.toggle("hidden", !visible);
+  document.querySelector(".chart-panel").classList.toggle("hidden", !visible);
+  document.querySelector(".breakdown-grid").classList.toggle("hidden", !visible);
 }
 
 document.getElementById("site-select").addEventListener("change", async (e) => {
@@ -198,6 +220,24 @@ document.getElementById("form-add-site").addEventListener("submit", async (e) =>
 document.getElementById("btn-close-new-site").addEventListener("click", async () => {
   hide("modal-add-site");
   await refreshAll();
+});
+
+document.getElementById("btn-delete-site").addEventListener("click", async () => {
+  if (!state.currentSiteId) return;
+  const site = state.sites.find((s) => s.id === state.currentSiteId);
+  const siteName = site ? site.name : state.currentSiteId;
+
+  // A native confirm() is deliberately used here: deleting a site permanently
+  // removes all of its visits, so an accidental click must not be one click away.
+  const confirmed = window.confirm(
+    `Delete "${siteName}"? This permanently removes all of its collected analytics data. This cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  await api(`/sites/${state.currentSiteId}`, { method: "DELETE" });
+  state.currentSiteId = null;
+  await loadSites();
+  if (state.currentSiteId) await refreshAll();
 });
 
 // ---------- period selector ----------
