@@ -101,14 +101,14 @@ Copy the `database_id` value.
 ### Step 5 — Create the cache namespace
 
 ```bash
-npx wrangler kv namespace create CACHE
+npx wrangler kv namespace create AGANALITICS_CACHE
 ```
 
 This prints something like:
 
 ```
 [[kv_namespaces]]
-binding = "CACHE"
+binding = "AGANALITICS_CACHE"
 id = "abcdef1234567890abcdef1234567890"
 ```
 
@@ -125,7 +125,7 @@ database_name = "ag_analytics_db"
 database_id = "PASTE_YOUR_D1_DATABASE_ID_HERE"
 
 [[kv_namespaces]]
-binding = "CACHE"
+binding = "AGANALITICS_CACHE"
 id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
 ```
 

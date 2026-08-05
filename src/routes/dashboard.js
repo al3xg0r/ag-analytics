@@ -9,7 +9,7 @@ export async function handleDashboard(request, env) {
   if (!siteId) return error("site_id is required");
 
   const cacheKey = `dashboard:${siteId}:${period}`;
-  const cached = await cacheGet(env.CACHE, cacheKey);
+  const cached = await cacheGet(env.AGANALITICS_CACHE, cacheKey);
 
   // Online count is intentionally never cached (see routes/online.js for the
   // lightweight endpoint the dashboard polls separately every 60s).
@@ -63,6 +63,6 @@ export async function handleDashboard(request, env) {
     bounce_rate: bounceRate,
   };
 
-  await cacheSet(env.CACHE, cacheKey, result);
+  await cacheSet(env.AGANALITICS_CACHE, cacheKey, result);
   return json({ ...result, online, cached: false });
 }

@@ -13,7 +13,7 @@ export async function handleBreakdown(request, env, { cacheName, groupByExpr }) 
   if (!siteId) return error("site_id is required");
 
   const cacheKey = `${cacheName}:${siteId}:${period}:${limit}`;
-  const cached = await cacheGet(env.CACHE, cacheKey);
+  const cached = await cacheGet(env.AGANALITICS_CACHE, cacheKey);
   if (cached) return json(cached);
 
   const { start, end } = getPeriodRange(period);
@@ -30,6 +30,6 @@ export async function handleBreakdown(request, env, { cacheName, groupByExpr }) 
     .all();
 
   const payload = { site_id: siteId, period, items: results };
-  await cacheSet(env.CACHE, cacheKey, payload);
+  await cacheSet(env.AGANALITICS_CACHE, cacheKey, payload);
   return json(payload);
 }
