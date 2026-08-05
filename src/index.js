@@ -1,12 +1,14 @@
 import { handleCollect } from "./routes/collect.js";
 import { handleHeartbeat } from "./routes/heartbeat.js";
 import { handleDashboard } from "./routes/dashboard.js";
+import { handleOnline } from "./routes/online.js";
 import { handleStats } from "./routes/stats.js";
 import { handlePages } from "./routes/pages.js";
 import { handleCountries } from "./routes/countries.js";
 import { handleReferrers } from "./routes/referrers.js";
 import { handleDevices } from "./routes/devices.js";
 import { handleBrowsers } from "./routes/browsers.js";
+import { handleSearchEngines } from "./routes/search-engines.js";
 import { handleSetup, handleAuthStatus, handleLogin } from "./routes/auth.js";
 import {
   handleListSites,
@@ -20,7 +22,7 @@ import { error, handleOptions } from "./lib/response.js";
 // Routes that require a valid admin JWT (everything that reads or manages
 // private analytics data). /collect and /heartbeat stay public on purpose:
 // that is what the tracker script on visitors' browsers calls.
-const PROTECTED_PREFIXES = ["/dashboard", "/stats", "/pages", "/countries", "/referrers", "/devices", "/browsers", "/sites"];
+const PROTECTED_PREFIXES = ["/dashboard", "/online", "/stats", "/pages", "/countries", "/referrers", "/search-engines", "/devices", "/browsers", "/sites"];
 
 function isProtected(pathname) {
   return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
@@ -50,10 +52,12 @@ export default {
       }
 
       if (pathname === "/dashboard" && request.method === "GET") return handleDashboard(request, env);
+      if (pathname === "/online" && request.method === "GET") return handleOnline(request, env);
       if (pathname === "/stats" && request.method === "GET") return handleStats(request, env);
       if (pathname === "/pages" && request.method === "GET") return handlePages(request, env);
       if (pathname === "/countries" && request.method === "GET") return handleCountries(request, env);
       if (pathname === "/referrers" && request.method === "GET") return handleReferrers(request, env);
+      if (pathname === "/search-engines" && request.method === "GET") return handleSearchEngines(request, env);
       if (pathname === "/devices" && request.method === "GET") return handleDevices(request, env);
       if (pathname === "/browsers" && request.method === "GET") return handleBrowsers(request, env);
 

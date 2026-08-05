@@ -16,8 +16,8 @@ database_id = "08eb91d1-1c3b-4f96-8005-cacee53b8f3e"
 
 # KV namespace, created with: wrangler kv namespace create CACHE
 [[kv_namespaces]]
-binding = "CACHE"
-id = "67e46a0c5a91487abaad54ed7ad1f743"
+binding = "AGANALITICS_CACHE"
+id = "f628561c8b3b40e2ae2e2eb8864d11f2"
 
 # Secrets (set with `wrangler secret put NAME`, never store real values here):
 #   JWT_SECRET      -> random 32+ character string, used to sign admin login tokens

@@ -65,12 +65,14 @@
 
   function trackHeartbeat() {
     if (document.visibilityState === "visible") {
-      send("/heartbeat", { site: site });
+      send("/heartbeat", { site: site, sessionId: sessionId });
     }
   }
 
   trackPageView();
-  setInterval(trackHeartbeat, 30000);
+  // 45s heartbeat: frequent enough for the "online now" indicator to feel
+  // live, spaced out enough to stay comfortably inside free-tier database quotas.
+  setInterval(trackHeartbeat, 45000);
 
   // Single Page Apps: catch client-side navigation without a full page reload
   var lastUrl = location.href;

@@ -1,8 +1,19 @@
 // Cloudflare KV caching helper.
 // Dashboard, top pages, countries, referrers and daily stats are all expensive
-// aggregate queries, so their results are cached for a short TTL.
+// aggregate queries, so their results are cached here.
+//
+// IMPORTANT: "online now" tracking used to live in KV (one write per visitor
+// every 30 seconds). Cloudflare's free plan allows only 1,000 KV writes per
+// day per namespace, so a handful of concurrent visitors could exhaust the
+// entire daily quota within minutes. Online tracking now lives in D1 instead
+// (see lib/db.js -> countOnline), which has a much higher free quota
+// (100,000 writes/day, 5,000,000 reads/day) and needs no extra writes beyond
+// the session update collect/heartbeat already perform.
 
-const CACHE_TTL_SECONDS = 300; // 5 minutes, as required by the project spec
+// 15 minutes by default. Raise this further (e.g. 1800 = 30 min) if you are
+// close to the free plan's D1 read quota; lower it if you want fresher numbers
+// and have headroom left. This is the single place that controls it.
+const CACHE_TTL_SECONDS = 900;
 
 export async function cacheGet(kv, key) {
   const raw = await kv.get(key);
@@ -11,18 +22,4 @@ export async function cacheGet(kv, key) {
 
 export async function cacheSet(kv, key, value) {
   await kv.put(key, JSON.stringify(value), { expirationTtl: CACHE_TTL_SECONDS });
-}
-
-// Tracks "online now" visitors without ever storing an IP address.
-// Each heartbeat refreshes a per-visitor key with a short TTL; counting the
-// matching keys tells us how many people are currently on the site.
-const ONLINE_TTL_SECONDS = 60;
-
-export async function markOnline(kv, siteId, visitorHash) {
-  await kv.put(`online:${siteId}:${visitorHash}`, "1", { expirationTtl: ONLINE_TTL_SECONDS });
-}
-
-export async function countOnline(kv, siteId) {
-  const list = await kv.list({ prefix: `online:${siteId}:` });
-  return list.keys.length;
 }

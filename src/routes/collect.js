@@ -2,7 +2,6 @@ import { getSiteById, insertVisit, upsertSession } from "../lib/db.js";
 import { parseBrowser, parseOS, parseDeviceType } from "../lib/ua-parser.js";
 import { parseReferrer, extractUtm } from "../lib/utm.js";
 import { buildVisitorHash } from "../lib/visitor.js";
-import { markOnline } from "../lib/kv.js";
 import { json, noContent } from "../lib/response.js";
 
 export async function handleCollect(request, env) {
@@ -66,7 +65,6 @@ export async function handleCollect(request, env) {
   });
 
   await upsertSession(env.DB, site, sessionId, visitorHash);
-  await markOnline(env.CACHE, site, visitorHash);
 
   return json({ ok: true, sessionId }, 200);
 }

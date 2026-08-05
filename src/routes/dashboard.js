@@ -1,5 +1,5 @@
-import { getPeriodRange } from "../lib/db.js";
-import { cacheGet, cacheSet, countOnline } from "../lib/kv.js";
+import { getPeriodRange, countOnline } from "../lib/db.js";
+import { cacheGet, cacheSet } from "../lib/kv.js";
 import { json, error } from "../lib/response.js";
 
 export async function handleDashboard(request, env) {
@@ -11,9 +11,16 @@ export async function handleDashboard(request, env) {
   const cacheKey = `dashboard:${siteId}:${period}`;
   const cached = await cacheGet(env.CACHE, cacheKey);
 
+  // Online count is intentionally never cached (see routes/online.js for the
+  // lightweight endpoint the dashboard polls separately every 60s).
+  if (cached) {
+    const online = await countOnline(env.DB, siteId);
+    return json({ ...cached, online, cached: true });
+  }
+
   const { start, end } = getPeriodRange(period);
 
-  const [visitorsRow, viewsRow, avgDurationRow, singlePageSessionsRow, totalSessionsRow] = await Promise.all([
+  const [visitorsRow, viewsRow, avgDurationRow, singlePageSessionsRow, totalSessionsRow, online] = await Promise.all([
     env.DB.prepare(
       "SELECT COUNT(DISTINCT visitor_hash) as count FROM visits WHERE site_id = ? AND created_at BETWEEN ? AND ?"
     )
@@ -39,9 +46,8 @@ export async function handleDashboard(request, env) {
     )
       .bind(siteId, start, end)
       .first(),
+    countOnline(env.DB, siteId),
   ]);
-
-  const online = await countOnline(env.CACHE, siteId);
 
   const totalSessions = totalSessionsRow?.count || 0;
   const bounceRate = totalSessions > 0 ? Math.round((singlePageSessionsRow.count / totalSessions) * 100) : 0;
@@ -53,17 +59,10 @@ export async function handleDashboard(request, env) {
     unique_visitors: visitorsRow?.count || 0,
     page_views: viewsRow?.count || 0,
     hits: viewsRow?.count || 0,
-    online,
     avg_time_seconds: avgTimeSeconds,
     bounce_rate: bounceRate,
-    cached: false,
   };
 
-  // Online count must always be fresh, everything else can come from cache
-  if (cached) {
-    return json({ ...cached, online, cached: true });
-  }
-
   await cacheSet(env.CACHE, cacheKey, result);
-  return json(result);
+  return json({ ...result, online, cached: false });
 }

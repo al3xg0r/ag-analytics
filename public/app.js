@@ -134,13 +134,14 @@ document.getElementById("btn-logout").addEventListener("click", () => {
 // ---------- theme ----------
 
 function applyStoredTheme() {
-  const theme = localStorage.getItem(THEME_KEY) || "dark";
+  // Light is the default look; dark is opt-in and remembered per browser.
+  const theme = localStorage.getItem(THEME_KEY) || "light";
   document.documentElement.setAttribute("data-theme", theme);
 }
 
 document.getElementById("btn-theme").addEventListener("click", () => {
   const current = document.documentElement.getAttribute("data-theme");
-  const next = current === "dark" ? "light" : "dark";
+  const next = current === "light" ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", next);
   localStorage.setItem(THEME_KEY, next);
 });
@@ -214,7 +215,7 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
 
 async function refreshAll() {
   if (!state.currentSiteId) return;
-  await Promise.all([loadDashboard(), loadChart(), loadBreakdowns()]);
+  await Promise.all([loadDashboard(), loadOnline(), loadChart(), loadBreakdowns()]);
 }
 
 async function loadDashboard() {
@@ -223,6 +224,14 @@ async function loadDashboard() {
   document.getElementById("stat-views").textContent = data.page_views;
   document.getElementById("stat-time").textContent = formatSeconds(data.avg_time_seconds);
   document.getElementById("stat-bounce").textContent = `${data.bounce_rate}%`;
+  document.getElementById("online-count").textContent = data.online;
+}
+
+// Separate, lightweight call: polled far more often than the rest of the
+// dashboard, so it stays a single cheap query instead of re-running every
+// aggregate on /dashboard.
+async function loadOnline() {
+  const data = await api(`/online?site_id=${state.currentSiteId}`);
   document.getElementById("online-count").textContent = data.online;
 }
 
@@ -255,7 +264,7 @@ function drawChart(buckets) {
 
   const area = document.createElementNS(ns, "path");
   area.setAttribute("d", areaPath);
-  area.setAttribute("fill", "var(--accent-dim)");
+  area.setAttribute("fill", "var(--accent)");
   area.setAttribute("opacity", "0.35");
   svg.appendChild(area);
 
@@ -283,9 +292,10 @@ function renderTable(tableId, items, formatLabel) {
 
 async function loadBreakdowns() {
   const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=8`;
-  const [pages, referrers, countries, browsers, os, devices] = await Promise.all([
+  const [pages, referrers, searchEngines, countries, browsers, os, devices] = await Promise.all([
     api(`/pages?${q}`),
     api(`/referrers?${q}`),
+    api(`/search-engines?${q}`),
     api(`/countries?${q}`),
     api(`/browsers?${q}`),
     api(`/devices?${q}&dimension=os`),
@@ -294,15 +304,18 @@ async function loadBreakdowns() {
 
   renderTable("table-pages", pages.items, (label) => new URL(label, "https://x.invalid").pathname || label);
   renderTable("table-referrers", referrers.items);
+  renderTable("table-search-engines", searchEngines.items);
   renderTable("table-countries", countries.items);
   renderTable("table-browsers", browsers.items);
   renderTable("table-os", os.items);
   renderTable("table-devices", devices.items);
 }
 
-// Refresh the online count every 20 seconds without reloading everything else
+// Refresh only the "online now" number regularly. Everything else only
+// reloads when the site or period selection changes, which keeps request
+// volume (and free-tier quota usage) low.
 setInterval(() => {
-  if (state.currentSiteId) loadDashboard().catch(() => {});
-}, 20000);
+  if (state.currentSiteId) loadOnline().catch(() => {});
+}, 60000);
 
 boot();

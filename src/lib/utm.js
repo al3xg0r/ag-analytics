@@ -50,6 +50,9 @@ export function parseReferrer(referrerRaw, currentHost) {
       result.searchEngine = engine.name;
       result.source = engine.name;
       result.searchQuery = referrerUrl.searchParams.get(engine.queryParam) || null;
+      // Cleared on purpose: search engines are shown in their own "Search engines"
+      // panel, so they should not also dilute the general "Referrers" breakdown.
+      result.referrerDomain = null;
       return result;
     }
   }

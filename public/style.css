@@ -1,35 +1,47 @@
 /* AG Analytics design tokens
-   Palette: near-black slate background with a signal-mint accent used only
-   for the one truly "live" number on the page (visitors currently online).
-   Type: Space Grotesk for headings, Inter for interface text,
+   Light-first, modern SaaS look: soft neutral background, white elevated
+   cards with a gentle shadow, a single violet accent for interface elements,
+   and a separate mint "live" color reserved only for the one number on the
+   page that updates in real time (visitors online now).
+   Type: Space Grotesk for headings/brand, Inter for interface text,
    IBM Plex Mono for every number, since precision-looking digits matter
    more than decoration in an analytics tool. */
 
 :root {
-  --bg: #0b0f0e;
-  --surface: #121815;
-  --surface-2: #182420;
-  --border: #223330;
-  --text: #e8ede9;
-  --text-muted: #7c8d89;
-  --accent: #4fd1ae;
-  --accent-dim: #2b6f5c;
-  --negative: #e2725b;
-  --radius: 10px;
+  --bg: #f5f5f9;
+  --surface: #ffffff;
+  --surface-2: #f1f0f8;
+  --border: #e6e4f0;
+  --text: #17171f;
+  --text-muted: #6e6e82;
+  --accent: #6c5ce7;
+  --accent-soft: #eeebfd;
+  --accent-contrast: #ffffff;
+  --live: #16a672;
+  --live-soft: #dcf5ea;
+  --negative: #e4572e;
+  --radius: 14px;
+  --shadow-sm: 0 1px 2px rgba(23, 23, 31, 0.05);
+  --shadow-lg: 0 16px 32px -20px rgba(23, 23, 31, 0.28);
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
 }
 
-[data-theme="light"] {
-  --bg: #f5f7f5;
-  --surface: #ffffff;
-  --surface-2: #eef2f0;
-  --border: #d9e2de;
-  --text: #131a17;
-  --text-muted: #5b6b66;
-  --accent: #17967a;
-  --accent-dim: #b8ece0;
+[data-theme="dark"] {
+  --bg: #0e0e14;
+  --surface: #17171f;
+  --surface-2: #1e1e29;
+  --border: #2a2a38;
+  --text: #f2f2f7;
+  --text-muted: #9391a8;
+  --accent: #9c8cff;
+  --accent-soft: rgba(156, 140, 255, 0.16);
+  --accent-contrast: #0e0e14;
+  --live: #34d399;
+  --live-soft: rgba(52, 211, 153, 0.16);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
 }
 
 * { box-sizing: border-box; }
@@ -59,8 +71,9 @@ html, body {
   max-width: 380px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 32px;
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow-lg);
+  padding: 36px 32px;
 }
 
 .brand {
@@ -69,16 +82,16 @@ html, body {
   font-size: 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   margin-bottom: 24px;
 }
 
 .brand-mark {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 h1 {
@@ -102,7 +115,7 @@ form input {
   padding: 10px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 14px;
@@ -118,15 +131,18 @@ button {
   font-weight: 600;
   cursor: pointer;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
+  transition: transform 0.1s ease, background 0.15s ease, border-color 0.15s ease;
 }
+
+button:active { transform: scale(0.98); }
 
 form > button[type="submit"] {
   width: 100%;
   margin-top: 20px;
   padding: 11px;
   background: var(--accent);
-  color: #06110d;
+  color: var(--accent-contrast);
 }
 
 .form-error {
@@ -137,18 +153,19 @@ form > button[type="submit"] {
 }
 
 .btn-ghost {
-  background: transparent;
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   padding: 8px 10px;
 }
+.btn-ghost:hover { color: var(--text); border-color: var(--accent); }
 
 .btn-ghost.small { font-size: 12px; padding: 6px 10px; }
 
 /* App shell */
 .app {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 250px 1fr;
   min-height: 100vh;
 }
 
@@ -174,22 +191,22 @@ form > button[type="submit"] {
   padding: 9px 10px;
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 13px;
 }
 
-.period-tabs { display: flex; flex-direction: column; gap: 4px; }
+.period-tabs { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .period-tabs button {
   text-align: left;
   background: transparent;
   color: var(--text-muted);
   padding: 8px 10px;
   font-size: 13px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
-.period-tabs button.active { background: var(--surface-2); color: var(--text); }
+.period-tabs button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
 .sidebar-footer {
   margin-top: auto;
@@ -198,7 +215,7 @@ form > button[type="submit"] {
   gap: 8px;
 }
 
-.content { padding: 32px 40px; }
+.content { padding: 32px 40px 56px; }
 
 .content-header {
   display: flex;
@@ -207,7 +224,7 @@ form > button[type="submit"] {
   margin-bottom: 24px;
 }
 
-#site-name { font-size: 24px; }
+#site-name { font-size: 26px; }
 
 .online-indicator {
   display: flex;
@@ -216,9 +233,13 @@ form > button[type="submit"] {
   font-family: var(--font-mono);
   font-size: 14px;
   color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
 }
 
-#online-count { color: var(--accent); font-weight: 600; }
+#online-count { color: var(--live); font-weight: 600; }
 
 /* Signature element: a live pulsing dot, the one animated thing on the page,
    reserved for the single number that changes in real time. */
@@ -227,19 +248,19 @@ form > button[type="submit"] {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--live);
 }
 .pulse-dot::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--live);
   animation: pulse 2s ease-out infinite;
 }
 @keyframes pulse {
-  0% { transform: scale(1); opacity: 0.7; }
-  100% { transform: scale(3.2); opacity: 0; }
+  0% { transform: scale(1); opacity: 0.65; }
+  100% { transform: scale(3.4); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot::after { animation: none; }
@@ -256,17 +277,19 @@ form > button[type="submit"] {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
 }
 
-.card-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
-.card-value { font-family: var(--font-mono); font-size: 26px; font-weight: 600; }
+.card-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+.card-value { font-family: var(--font-mono); font-size: 28px; font-weight: 600; }
 
 .chart-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
   margin-bottom: 24px;
 }
 
@@ -282,7 +305,8 @@ form > button[type="submit"] {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 18px;
 }
 
 .panel-title {
@@ -292,15 +316,16 @@ form > button[type="submit"] {
 }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-table td { padding: 6px 0; border-bottom: 1px solid var(--border); }
-td.label { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+table td { padding: 7px 0; border-bottom: 1px solid var(--border); }
+table tr:last-child td { border-bottom: none; }
+td.label { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
 td.value { font-family: var(--font-mono); text-align: right; color: var(--text-muted); }
 
 /* Modal */
 .modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 15, 20, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -310,7 +335,8 @@ td.value { font-family: var(--font-mono); text-align: right; color: var(--text-m
 .modal-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow-lg);
   padding: 28px;
   width: 100%;
   max-width: 420px;
@@ -326,7 +352,7 @@ td.value { font-family: var(--font-mono); text-align: right; color: var(--text-m
 pre {
   background: var(--surface-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 9px;
   padding: 12px;
   font-family: var(--font-mono);
   font-size: 12px;

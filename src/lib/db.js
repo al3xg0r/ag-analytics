@@ -101,6 +101,26 @@ export async function upsertSession(db, siteId, sessionId, visitorHash) {
   }
 }
 
+// Called on every heartbeat beacon (roughly every 45s while a tab stays open).
+// Only touches last_seen, does not count as a new page view.
+export async function touchSession(db, sessionId) {
+  await db.prepare("UPDATE sessions SET last_seen = ? WHERE id = ?").bind(Date.now(), sessionId).run();
+}
+
+// "Online now" = a session whose last_seen falls inside a short rolling window.
+// This replaces the old KV-based counter: no extra writes are needed here at
+// all, since collect/heartbeat already update sessions.last_seen for other
+// reasons. Reads are cheap and generous on Cloudflare D1's free plan.
+const ONLINE_WINDOW_MS = 90 * 1000; // 2x the tracker's heartbeat interval
+
+export async function countOnline(db, siteId) {
+  const row = await db
+    .prepare("SELECT COUNT(DISTINCT visitor_hash) as count FROM sessions WHERE site_id = ? AND last_seen > ?")
+    .bind(siteId, Date.now() - ONLINE_WINDOW_MS)
+    .first();
+  return row?.count || 0;
+}
+
 // Returns { start, end } timestamps (ms) in UTC for a named period.
 // "today" and "yesterday" are calendar-day boundaries; the rest are rolling windows.
 export function getPeriodRange(period) {

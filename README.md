@@ -14,7 +14,7 @@ to be deployed by someone with **zero Cloudflare experience** in about 5 minutes
 
 - One Worker handles the tracking API, the admin API, and serves the dashboard.
 - One D1 database (SQLite, serverless) stores everything.
-- One KV namespace caches expensive dashboard queries for 5 minutes and tracks "online now" visitors.
+- One KV namespace caches expensive dashboard queries for 15 minutes.
 - One tiny `tracker.js` script (no cookies, no fingerprinting) is pasted into any website.
 - One dashboard (plain HTML/CSS/JS, no build step) lets you view the stats and manage sites.
 
@@ -192,11 +192,14 @@ That's it. No terminal, no SQL, no Docker, no VPS from this point on.
 
 - **Site selector** (top of the sidebar) switches between every site you've added.
 - **Period tabs** switch between Today, Yesterday, 7 days, 30 days, 12 months, and All time.
-- **Online now** (top right, with the pulsing dot) is the only number that updates in real time;
-  everything else refreshes when you change the site or period.
-- **Top pages / Referrers / Countries / Browsers / Operating systems / Devices** are ranked
-  tables for the selected site and period.
-- The **theme toggle** switches between dark and light mode.
+- **Online now** (top right, with the pulsing dot) is the only number that updates in real time
+  (polled every 60 seconds); everything else refreshes when you change the site or period.
+- **Top pages / Referrers / Search engines / Countries / Browsers / Operating systems / Devices**
+  are ranked tables for the selected site and period. Search engine traffic (Google, Bing,
+  DuckDuckGo, Brave Search, Yahoo, Yandex) is shown in its own panel, separate from regular
+  referring websites, so you can see at a glance where search traffic comes from.
+- The **theme toggle** switches between the default light theme and a dark theme; your choice is
+  remembered in the browser.
 
 ---
 
@@ -205,29 +208,31 @@ That's it. No terminal, no SQL, no Docker, no VPS from this point on.
 All endpoints live on your Worker's URL. Admin endpoints require a `Bearer` token obtained
 from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 
-| Method | Path          | Auth   | Purpose                                   |
-|--------|---------------|--------|--------------------------------------------|
-| POST   | `/collect`    | none   | Records one page view (called by tracker.js) |
-| POST   | `/heartbeat`  | none   | Keeps a visitor marked "online"           |
-| GET    | `/auth/status`| none   | Tells the frontend if first-run setup is needed |
-| POST   | `/auth/setup` | none*  | Creates the first admin account (works once) |
-| POST   | `/auth/login` | none   | Returns a JWT for the dashboard           |
-| GET    | `/dashboard`  | admin  | Summary numbers for a site + period       |
-| GET    | `/stats`      | admin  | Time-series data for the chart            |
-| GET    | `/pages`      | admin  | Top pages                                 |
-| GET    | `/countries`  | admin  | Visits by country                         |
-| GET    | `/referrers`  | admin  | Visits by referring domain                |
-| GET    | `/browsers`   | admin  | Visits by browser                         |
-| GET    | `/devices`    | admin  | Visits by `device_type`, `os`, or `screen_resolution` (`?dimension=`) |
-| GET    | `/sites`      | admin  | List all sites                            |
-| POST   | `/sites`      | admin  | Create a site, returns its tracking snippet |
-| PATCH  | `/sites/:id`  | admin  | Rename, enable/disable, or regenerate the API key |
-| DELETE | `/sites/:id`  | admin  | Delete a site and all of its data         |
+| Method | Path             | Auth   | Purpose                                   |
+|--------|------------------|--------|--------------------------------------------|
+| POST   | `/collect`       | none   | Records one page view (called by tracker.js) |
+| POST   | `/heartbeat`     | none   | Keeps a visitor's session marked "online" |
+| GET    | `/auth/status`   | none   | Tells the frontend if first-run setup is needed |
+| POST   | `/auth/setup`    | none*  | Creates the first admin account (works once) |
+| POST   | `/auth/login`    | none   | Returns a JWT for the dashboard           |
+| GET    | `/dashboard`     | admin  | Summary numbers for a site + period (cached) |
+| GET    | `/online`        | admin  | Visitors online right now (never cached, cheap) |
+| GET    | `/stats`         | admin  | Time-series data for the chart            |
+| GET    | `/pages`         | admin  | Top pages                                 |
+| GET    | `/countries`     | admin  | Visits by country                         |
+| GET    | `/referrers`     | admin  | Visits by referring website (search engines excluded) |
+| GET    | `/search-engines`| admin  | Visits by search engine (Google, Bing, DuckDuckGo, etc.) |
+| GET    | `/browsers`      | admin  | Visits by browser                         |
+| GET    | `/devices`       | admin  | Visits by `device_type`, `os`, or `screen_resolution` (`?dimension=`) |
+| GET    | `/sites`         | admin  | List all sites                            |
+| POST   | `/sites`         | admin  | Create a site, returns its tracking snippet |
+| PATCH  | `/sites/:id`     | admin  | Rename, enable/disable, or regenerate the API key |
+| DELETE | `/sites/:id`     | admin  | Delete a site and all of its data         |
 
 `*` `/auth/setup` disables itself automatically once the first admin account exists.
 
-Every `GET` endpoint above (except `/sites`) accepts `site_id` and `period` query parameters,
-where `period` is one of `today`, `yesterday`, `7d`, `30d`, `12m`, `all`.
+Every `GET` endpoint above (except `/sites` and `/online`) accepts `site_id` and `period` query
+parameters, where `period` is one of `today`, `yesterday`, `7d`, `30d`, `12m`, `all`.
 
 ---
 
@@ -264,11 +269,30 @@ test changes before deploying.
 
 ---
 
-## 9. Performance and limits
+## 9. Performance, limits, and staying inside the free plan
 
 Designed to comfortably handle up to **100,000 page views per day** on Cloudflare's free/paid
-Workers plan without any architecture changes, thanks to D1 for storage and KV caching every
-dashboard query for 5 minutes.
+Workers plan without any architecture changes.
+
+An earlier version of this project tracked "online now" visitors by writing to KV on every
+heartbeat (roughly every 30 seconds per open tab). Cloudflare's free plan allows only
+**1,000 KV writes per day per namespace**, so even a handful of visitors could exhaust that
+quota within minutes — the online counter would silently stop updating, and everything else
+sharing that KV namespace would be affected too. That has been fixed:
+
+- **Online tracking now lives entirely in D1** (`sessions.last_seen`), not KV. D1's free plan
+  allows 100,000 writes and 5,000,000 reads per day, so this is essentially free at small scale.
+  No KV writes happen for online tracking at all anymore.
+- **The tracker's heartbeat interval was increased from 30s to 45s**, further reducing write volume.
+- **Dashboard aggregate queries (visitors, pages, referrers, etc.) are cached in KV for 15 minutes**
+  by default (up from 5). You can change this in `src/lib/kv.js` (`CACHE_TTL_SECONDS`) — raise it
+  further if you're close to a quota, lower it if you want fresher numbers and have headroom.
+- **The dashboard only polls `/online`** (a single cheap query) every 60 seconds while open; it no
+  longer re-fetches the full dashboard just to refresh that one number.
+
+If you are on Cloudflare's free plan and expect meaningful traffic, KV writes are now the least of
+your concerns — watch your **D1 row reads/writes** and **Worker request count** instead, both of
+which have generous free-tier allowances for a small-to-medium site.
 
 ---
 
