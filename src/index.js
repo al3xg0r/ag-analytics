@@ -20,7 +20,7 @@ import { requireAdmin } from "./lib/auth.js";
 import { error, handleOptions } from "./lib/response.js";
 
 // Routes that require a valid admin JWT (everything that reads or manages
-// private analytics data). /collect and /heartbeat stay public on purpose:
+// private analytics data). /event and /ping stay public on purpose:
 // that is what the tracker script on visitors' browsers calls.
 const PROTECTED_PREFIXES = ["/dashboard", "/online", "/stats", "/pages", "/countries", "/referrers", "/search-engines", "/devices", "/browsers", "/sites"];
 
@@ -36,9 +36,19 @@ export default {
     if (request.method === "OPTIONS") return handleOptions();
 
     try {
-      // Public, unauthenticated endpoints used by tracker.js in visitors' browsers
-      if (pathname === "/collect" && request.method === "POST") return handleCollect(request, env);
-      if (pathname === "/heartbeat" && request.method === "POST") return handleHeartbeat(request, env);
+      // Public, unauthenticated endpoints used by tracker.js in visitors' browsers.
+      // "/event" and "/ping" are the primary names: generic analytics/tracking
+      // paths like "/collect" and "/heartbeat" are common targets in ad-blocker
+      // filter lists (EasyPrivacy and similar), which silently drops visits.
+      // "/collect" and "/heartbeat" are kept working as aliases so any
+      // already-deployed tracker.js copy (which may still call the old paths
+      // if cached) keeps working too.
+      if ((pathname === "/event" || pathname === "/collect") && request.method === "POST") {
+        return handleCollect(request, env);
+      }
+      if ((pathname === "/ping" || pathname === "/heartbeat") && request.method === "POST") {
+        return handleHeartbeat(request, env);
+      }
 
       // Admin auth endpoints
       if (pathname === "/auth/status" && request.method === "GET") return handleAuthStatus(request, env);

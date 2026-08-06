@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AG Analytics</title>
   <meta name="description" content="Lightweight, privacy-first, serverless analytics" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
@@ -49,8 +50,9 @@
       <div class="sidebar-section">
         <div class="sidebar-label">Site</div>
         <select id="site-select"></select>
+        <button id="btn-add-site" class="btn-ghost small full-width">+ Add site</button>
         <div class="site-actions">
-          <button id="btn-add-site" class="btn-ghost small">+ Add site</button>
+          <button id="btn-view-code" class="btn-ghost small">&lt;/&gt; Code</button>
           <button id="btn-delete-site" class="btn-ghost small danger" title="Delete the selected site">Delete</button>
         </div>
       </div>
@@ -76,9 +78,12 @@
     <main class="content">
       <header class="content-header">
         <h1 id="site-name">—</h1>
-        <div class="online-indicator">
-          <span class="pulse-dot"></span>
-          <span id="online-count">0</span> online now
+        <div class="header-actions">
+          <div class="online-indicator">
+            <span class="pulse-dot"></span>
+            <span id="online-count">0</span> online now
+          </div>
+          <button id="btn-customize" class="btn-ghost small" title="Choose which panels to show">⚙ Customize</button>
         </div>
       </header>
 
@@ -90,35 +95,36 @@
       </section>
 
       <section class="chart-panel">
-        <svg id="chart" viewBox="0 0 800 220" preserveAspectRatio="none"></svg>
+        <svg id="chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>
+        <div id="chart-tooltip" class="chart-tooltip hidden"></div>
       </section>
 
-      <section class="breakdown-grid">
-        <div class="panel">
+      <section class="breakdown-grid" id="breakdown-grid">
+        <div class="panel" data-panel="pages">
           <div class="panel-title">Top pages</div>
           <table id="table-pages"><tbody></tbody></table>
         </div>
-        <div class="panel">
+        <div class="panel" data-panel="referrers">
           <div class="panel-title">Referrers</div>
           <table id="table-referrers"><tbody></tbody></table>
         </div>
-        <div class="panel">
+        <div class="panel" data-panel="search-engines">
           <div class="panel-title">Search engines</div>
           <table id="table-search-engines"><tbody></tbody></table>
         </div>
-        <div class="panel">
+        <div class="panel" data-panel="countries">
           <div class="panel-title">Countries</div>
           <table id="table-countries"><tbody></tbody></table>
         </div>
-        <div class="panel">
+        <div class="panel" data-panel="browsers">
           <div class="panel-title">Browsers</div>
           <table id="table-browsers"><tbody></tbody></table>
         </div>
-        <div class="panel">
+        <div class="panel" data-panel="os">
           <div class="panel-title">Operating systems</div>
           <table id="table-os"><tbody></tbody></table>
         </div>
-        <div class="panel">
+        <div class="panel" data-panel="devices">
           <div class="panel-title">Devices</div>
           <table id="table-devices"><tbody></tbody></table>
         </div>
@@ -144,6 +150,39 @@
         <pre id="new-site-snippet"></pre>
         <button id="btn-close-new-site">Done</button>
       </div>
+    </div>
+  </div>
+
+  <!-- View tracking code modal (available any time, not just at creation) -->
+  <div id="modal-view-code" class="modal hidden">
+    <div class="modal-card">
+      <h2>Tracking code</h2>
+      <p class="muted">Paste this snippet on <span id="code-site-name">this site</span>, right before <code>&lt;/body&gt;</code>.</p>
+      <pre id="view-code-snippet"></pre>
+      <div class="modal-actions">
+        <button type="button" id="btn-copy-code" class="btn-ghost">Copy</button>
+        <button type="button" id="btn-close-view-code">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customize panels modal -->
+  <div id="modal-customize" class="modal hidden">
+    <div class="modal-card">
+      <h2>Customize dashboard</h2>
+      <p class="muted">Choose which panels appear below the chart. Saved in this browser.</p>
+      <form id="form-customize">
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="pages" checked /> Top pages</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="referrers" checked /> Referrers</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="search-engines" checked /> Search engines</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="countries" checked /> Countries</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="browsers" checked /> Browsers</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="os" checked /> Operating systems</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="devices" checked /> Devices</label>
+        <div class="modal-actions">
+          <button type="button" id="btn-close-customize">Done</button>
+        </div>
+      </form>
     </div>
   </div>
 

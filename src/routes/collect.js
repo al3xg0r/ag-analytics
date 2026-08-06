@@ -1,6 +1,6 @@
 import { getSiteById, insertVisit, upsertSession } from "../lib/db.js";
 import { parseBrowser, parseOS, parseDeviceType } from "../lib/ua-parser.js";
-import { parseReferrer, extractUtm } from "../lib/utm.js";
+import { parseReferrer, extractUtm, normalizePagePath } from "../lib/utm.js";
 import { buildVisitorHash } from "../lib/visitor.js";
 import { json, noContent } from "../lib/response.js";
 
@@ -39,12 +39,13 @@ export async function handleCollect(request, env) {
 
   const referrerInfo = parseReferrer(referrer, currentHost);
   const utm = extractUtm(url);
+  const path = normalizePagePath(url);
 
   await insertVisit(env.DB, {
     siteId: site,
     sessionId,
     visitorHash,
-    url,
+    url: path,
     pageTitle: title || null,
     referrer: referrerInfo.referrer,
     referrerDomain: referrerInfo.referrerDomain,

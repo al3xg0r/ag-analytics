@@ -83,3 +83,25 @@ export function extractUtm(url) {
     utmContent: parsed.searchParams.get("utm_content"),
   };
 }
+
+// Reduces an absolute page URL down to just its path (+ non-marketing query
+// params). This is what "Top pages" is grouped by, on purpose:
+//  - Hosting platforms that serve the same site from more than one hostname
+//    (a custom domain plus an auto-generated preview/deployment URL, which is
+//    how IPFS hosts like 4everland work) would otherwise fragment every page
+//    into multiple separate rows, one per hostname.
+//  - UTM tags are already captured in their own columns, so leaving them in
+//    the path would fragment "the same page" into one row per campaign too.
+const UTM_PARAM_NAMES = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+
+export function normalizePagePath(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  for (const param of UTM_PARAM_NAMES) parsed.searchParams.delete(param);
+  const search = parsed.searchParams.toString();
+  return parsed.pathname + (search ? `?${search}` : "");
+}

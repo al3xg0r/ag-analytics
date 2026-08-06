@@ -191,9 +191,20 @@ That's it. No terminal, no SQL, no Docker, no VPS from this point on.
 ## 5. Using the dashboard
 
 - **Site selector** (top of the sidebar) switches between every site you've added.
+- **Code** button (next to Delete, under the site selector) shows the tracking snippet for the
+  currently selected site at any time — not just right after creating it — with a one-click copy
+  button.
+- **Delete** removes the selected site and all of its collected data, after a confirmation prompt.
 - **Period tabs** switch between Today, Yesterday, 7 days, 30 days, 12 months, and All time.
 - **Online now** (top right, with the pulsing dot) is the only number that updates in real time
   (polled every 60 seconds); everything else refreshes when you change the site or period.
+- **Chart**: hover anywhere on it to see the exact time bucket, page views, and unique visitors at
+  that point, with a crosshair and gridlines for scale.
+- **⚙ Customize** (top right) lets you show or hide individual panels (Top pages, Referrers,
+  Search engines, Countries, Browsers, Operating systems, Devices). Your choice is saved in the
+  browser, per device.
+- **Top pages** entries are clickable links that open the actual page; **Referrers** entries link
+  to the referring site.
 - **Top pages / Referrers / Search engines / Countries / Browsers / Operating systems / Devices**
   are ranked tables for the selected site and period. Search engine traffic (Google, Bing,
   DuckDuckGo, Brave Search, Yahoo, Yandex) is shown in its own panel, separate from regular
@@ -210,8 +221,8 @@ from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 
 | Method | Path             | Auth   | Purpose                                   |
 |--------|------------------|--------|--------------------------------------------|
-| POST   | `/collect`       | none   | Records one page view (called by tracker.js) |
-| POST   | `/heartbeat`     | none   | Keeps a visitor's session marked "online" |
+| POST   | `/event`         | none   | Records one page view (called by tracker.js) |
+| POST   | `/ping`          | none   | Keeps a visitor's session marked "online" |
 | GET    | `/auth/status`   | none   | Tells the frontend if first-run setup is needed |
 | POST   | `/auth/setup`    | none*  | Creates the first admin account (works once) |
 | POST   | `/auth/login`    | none   | Returns a JWT for the dashboard           |
@@ -230,6 +241,9 @@ from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 | DELETE | `/sites/:id`     | admin  | Delete a site and all of its data         |
 
 `*` `/auth/setup` disables itself automatically once the first admin account exists.
+
+`/collect` and `/heartbeat` are kept working as aliases for `/event` and `/ping` respectively, for
+backward compatibility — new deployments and the current `tracker.js` use `/event`/`/ping`.
 
 Every `GET` endpoint above (except `/sites` and `/online`) accepts `site_id` and `period` query
 parameters, where `period` is one of `today`, `yesterday`, `7d`, `30d`, `12m`, `all`.
@@ -250,10 +264,16 @@ ag-analytics/
 │   └── routes/              One file per API endpoint
 └── public/
     ├── tracker.js         The script embedded on tracked websites
+    ├── favicon.svg        Dashboard favicon (drop in your own file to replace it)
     ├── index.html         Dashboard shell
     ├── style.css          Dashboard design
     └── app.js             Dashboard logic
 ```
+
+Anything placed in `public/` is served as-is at the matching path — e.g. `public/favicon.svg`
+becomes `https://your-worker.workers.dev/favicon.svg`. To use your own icon, replace that file
+(SVG is recommended; keep the same filename, or update the `<link rel="icon">` tag in
+`public/index.html` if you rename it).
 
 ---
 
@@ -296,7 +316,35 @@ which have generous free-tier allowances for a small-to-medium site.
 
 ---
 
-## 10. Security
+## 10. Troubleshooting: missing or incomplete visits
+
+If you visit your own site and don't see it show up, check these in order:
+
+1. **Wait up to 15 minutes.** Dashboard numbers (visitors, pages, referrers, etc.) are cached for
+   15 minutes to save on database reads (see section 9). The visit itself is recorded instantly —
+   only the dashboard's *summary* lags. Switching periods or waiting it out will show it.
+2. **Ad blockers and privacy extensions.** This is the most common cause of "missing" visits on
+   any self-hosted analytics tool. Many blocklists (EasyPrivacy and similar) specifically target
+   generic analytics-looking paths such as `/collect`. AG Analytics' tracker now calls `/event` and
+   `/ping` instead, specifically to avoid this — but a browser with aggressive tracking protection
+   (Brave Shields, uBlock Origin with strict lists, Safari ITP, some VPN/DNS-level blockers) can
+   still block it. Open your browser's DevTools → Network tab, reload the page, and check whether
+   a request to `/event` actually happens and returns `200`/`204`. If it's blocked or missing
+   entirely, that visitor's browser is filtering it — this is expected, privacy-respecting behavior
+   on their end, not a bug in the tracker.
+3. **The tracking snippet isn't actually live on the page.** Some site builders/CMSs only save
+   custom code in a draft or preview, not the published site. View the page's source (Ctrl+U /
+   Cmd+Option+U) on the live URL and confirm the `<script>` tag from **Code** in the dashboard
+   sidebar is actually present.
+4. **The site is served from more than one domain/URL.** If your host exposes both a custom domain
+   and an auto-generated preview/gateway URL (common with static-site and IPFS-style hosts), and a
+   visit happens on the second one, it is still recorded — just under that URL. Check whether the
+   visit appears under a different entry in **Top pages**/referrers before assuming it wasn't
+   recorded at all.
+
+---
+
+## 11. Security
 
 - All SQL queries are prepared statements — no string concatenation, no SQL injection surface.
 - Passwords are hashed with PBKDF2 (SHA-256, 100,000 iterations, random salt per password).
@@ -304,12 +352,12 @@ which have generous free-tier allowances for a small-to-medium site.
 - Site API keys are only used server-side to identify a site's tracker script; they are never
   treated as a secret the visitor's browser must protect (the `data-site` id is public by design,
   just like every analytics tracker's site id).
-- CORS is open on `/collect` and `/heartbeat` since any website using the tracker must be able
+- CORS is open on `/event` and `/ping` since any website using the tracker must be able
   to call them; every admin endpoint requires a valid token regardless of origin.
 
 ---
 
-## 11. Roadmap (v2 ideas)
+## 12. Roadmap (v2 ideas)
 
 Live visitors map, an Events API, Goals/Conversions, uptime monitoring, Telegram and email
 notifications, a public dashboard mode, and framework plugins (WordPress, Hugo, Astro,
@@ -317,7 +365,7 @@ Next.js, Vue, React).
 
 ---
 
-## 12. License
+## 13. License
 
 MIT License — use it, fork it, self-host it, modify it freely.
 

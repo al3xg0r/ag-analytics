@@ -51,7 +51,7 @@
   }
 
   function trackPageView() {
-    send("/collect", {
+    send("/event", {
       site: site,
       sessionId: sessionId,
       url: location.href,
@@ -65,7 +65,7 @@
 
   function trackHeartbeat() {
     if (document.visibilityState === "visible") {
-      send("/heartbeat", { site: site, sessionId: sessionId });
+      send("/ping", { site: site, sessionId: sessionId });
     }
   }
 

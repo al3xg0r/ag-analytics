@@ -5,6 +5,8 @@
 const API = ""; // same-origin: the Worker serves both the API and this file
 const TOKEN_KEY = "ag_admin_token";
 const THEME_KEY = "ag_theme";
+const PANELS_KEY = "ag_visible_panels";
+const ALL_PANELS = ["pages", "referrers", "search-engines", "countries", "browsers", "os", "devices"];
 
 let state = {
   sites: [],
@@ -80,6 +82,7 @@ async function boot() {
   try {
     await loadSites();
     showView("app");
+    applyVisiblePanels();
     await refreshAll();
   } catch (e) {
     showView("login");
@@ -155,16 +158,19 @@ async function loadSites() {
   select.innerHTML = sites.map((s) => `<option value="${s.id}">${s.name}</option>`).join("");
 
   const deleteButton = document.getElementById("btn-delete-site");
+  const codeButton = document.getElementById("btn-view-code");
 
   if (sites.length === 0) {
     state.currentSiteId = null;
     document.getElementById("site-name").textContent = "No sites yet";
     deleteButton.disabled = true;
+    codeButton.disabled = true;
     setContentVisible(false);
     return;
   }
 
   deleteButton.disabled = false;
+  codeButton.disabled = false;
   setContentVisible(true);
 
   // Keep the previously selected site if it still exists, otherwise fall back to the first one
@@ -240,6 +246,78 @@ document.getElementById("btn-delete-site").addEventListener("click", async () =>
   if (state.currentSiteId) await refreshAll();
 });
 
+// ---------- view tracking code (available any time, not just right after creating a site) ----------
+
+function buildTrackingSnippet(siteId) {
+  return `<script defer src="${location.origin}/tracker.js" data-site="${siteId}"></scr` + `ipt>`;
+}
+
+document.getElementById("btn-view-code").addEventListener("click", () => {
+  if (!state.currentSiteId) return;
+  const site = state.sites.find((s) => s.id === state.currentSiteId);
+  document.getElementById("code-site-name").textContent = site ? site.name : "this site";
+  document.getElementById("view-code-snippet").textContent = buildTrackingSnippet(state.currentSiteId);
+  show("modal-view-code");
+});
+
+document.getElementById("btn-close-view-code").addEventListener("click", () => {
+  hide("modal-view-code");
+});
+
+document.getElementById("btn-copy-code").addEventListener("click", async () => {
+  const text = document.getElementById("view-code-snippet").textContent;
+  const button = document.getElementById("btn-copy-code");
+  try {
+    await navigator.clipboard.writeText(text);
+    const original = button.textContent;
+    button.textContent = "Copied!";
+    setTimeout(() => (button.textContent = original), 1500);
+  } catch {
+    // Clipboard API can be blocked (permissions, insecure context); the snippet
+    // is still visible and selectable in the <pre> block as a fallback.
+  }
+});
+
+// ---------- customize which breakdown panels are shown ----------
+
+function getVisiblePanels() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PANELS_KEY));
+    if (Array.isArray(stored)) return stored;
+  } catch {
+    // fall through to default
+  }
+  return [...ALL_PANELS];
+}
+
+function applyVisiblePanels() {
+  const visible = getVisiblePanels();
+  document.querySelectorAll("#breakdown-grid .panel").forEach((panel) => {
+    panel.classList.toggle("hidden", !visible.includes(panel.dataset.panel));
+  });
+  document.querySelectorAll('#form-customize input[name="panel"]').forEach((checkbox) => {
+    checkbox.checked = visible.includes(checkbox.value);
+  });
+}
+
+document.getElementById("btn-customize").addEventListener("click", () => {
+  applyVisiblePanels();
+  show("modal-customize");
+});
+
+document.getElementById("btn-close-customize").addEventListener("click", () => {
+  hide("modal-customize");
+});
+
+document.getElementById("form-customize").addEventListener("change", (e) => {
+  if (e.target.name !== "panel") return;
+  const checked = Array.from(document.querySelectorAll('#form-customize input[name="panel"]:checked')).map(
+    (el) => el.value
+  );
+  localStorage.setItem(PANELS_KEY, JSON.stringify(checked));
+  applyVisiblePanels();
+});
+
 // ---------- period selector ----------
 
 document.getElementById("period-tabs").addEventListener("click", async (e) => {
@@ -280,53 +358,180 @@ async function loadChart() {
   drawChart(data.buckets);
 }
 
-function drawChart(buckets) {
-  const svg = document.getElementById("chart");
-  svg.innerHTML = "";
-  if (!buckets || buckets.length === 0) return;
-
-  const width = 800;
-  const height = 220;
-  const padding = 20;
-  const max = Math.max(...buckets.map((b) => b.views), 1);
-
-  const stepX = (width - padding * 2) / Math.max(buckets.length - 1, 1);
-  const points = buckets.map((b, i) => {
-    const x = padding + i * stepX;
-    const y = height - padding - (b.views / max) * (height - padding * 2);
-    return `${x},${y}`;
-  });
-
-  const linePath = `M ${points.join(" L ")}`;
-  const areaPath = `${linePath} L ${padding + (buckets.length - 1) * stepX},${height - padding} L ${padding},${height - padding} Z`;
-
-  const ns = "http://www.w3.org/2000/svg";
-
-  const area = document.createElementNS(ns, "path");
-  area.setAttribute("d", areaPath);
-  area.setAttribute("fill", "var(--accent)");
-  area.setAttribute("opacity", "0.35");
-  svg.appendChild(area);
-
-  const line = document.createElementNS(ns, "path");
-  line.setAttribute("d", linePath);
-  line.setAttribute("fill", "none");
-  line.setAttribute("stroke", "var(--accent)");
-  line.setAttribute("stroke-width", "2");
-  svg.appendChild(line);
+// Formats a bucket's ISO timestamp for the tooltip/axis, adapting to whether
+// buckets are hourly (Today/Yesterday) or daily (everything else).
+function formatBucketLabel(isoString) {
+  const date = new Date(isoString);
+  const isHourly = state.currentPeriod === "today" || state.currentPeriod === "yesterday";
+  return isHourly
+    ? date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function renderTable(tableId, items, formatLabel) {
+const CHART_WIDTH = 800;
+const CHART_HEIGHT = 240;
+const CHART_PADDING_X = 20;
+const CHART_PADDING_TOP = 16;
+const CHART_PADDING_BOTTOM = 32;
+
+function drawChart(buckets) {
+  const svg = document.getElementById("chart");
+  const tooltip = document.getElementById("chart-tooltip");
+  svg.setAttribute("viewBox", `0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`);
+  svg.innerHTML = "";
+  tooltip.classList.add("hidden");
+
+  if (!buckets || buckets.length === 0) {
+    const ns = "http://www.w3.org/2000/svg";
+    const text = document.createElementNS(ns, "text");
+    text.setAttribute("x", CHART_WIDTH / 2);
+    text.setAttribute("y", CHART_HEIGHT / 2);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("fill", "var(--text-muted)");
+    text.setAttribute("font-family", "var(--font-body)");
+    text.setAttribute("font-size", "14");
+    text.textContent = "No data for this period yet";
+    svg.appendChild(text);
+    return;
+  }
+
+  const innerTop = CHART_PADDING_TOP;
+  const innerBottom = CHART_HEIGHT - CHART_PADDING_BOTTOM;
+  const innerHeight = innerBottom - innerTop;
+  const max = Math.max(...buckets.map((b) => b.views), 1);
+
+  const stepX = (CHART_WIDTH - CHART_PADDING_X * 2) / Math.max(buckets.length - 1, 1);
+  const xFor = (i) => CHART_PADDING_X + i * stepX;
+  const yFor = (views) => innerBottom - (views / max) * innerHeight;
+
+  const points = buckets.map((b, i) => `${xFor(i)},${yFor(b.views)}`);
+  const linePath = `M ${points.join(" L ")}`;
+  const areaPath = `${linePath} L ${xFor(buckets.length - 1)},${innerBottom} L ${xFor(0)},${innerBottom} Z`;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const svgEl = (tag, attrs) => {
+    const el = document.createElementNS(ns, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    return el;
+  };
+
+  // Horizontal gridlines with a view-count scale on the left, so the chart
+  // reads as actual numbers instead of just a vague shape.
+  const gridSteps = 4;
+  for (let i = 0; i <= gridSteps; i++) {
+    const y = innerTop + (innerHeight / gridSteps) * i;
+    const value = Math.round(max - (max / gridSteps) * i);
+    svg.appendChild(
+      svgEl("line", {
+        x1: CHART_PADDING_X,
+        x2: CHART_WIDTH - CHART_PADDING_X,
+        y1: y,
+        y2: y,
+        stroke: "var(--border)",
+        "stroke-width": "1",
+      })
+    );
+    svg.appendChild(
+      svgEl("text", {
+        x: 0,
+        y: y - 4,
+        fill: "var(--text-muted)",
+        "font-family": "var(--font-mono)",
+        "font-size": "10",
+      })
+    ).textContent = value;
+  }
+
+  // A handful of evenly spaced x-axis labels (never one per bucket, that gets unreadable)
+  const labelCount = Math.min(buckets.length, 6);
+  const labelEvery = Math.max(Math.floor(buckets.length / labelCount), 1);
+  buckets.forEach((b, i) => {
+    if (i % labelEvery !== 0 && i !== buckets.length - 1) return;
+    const text = svgEl("text", {
+      x: xFor(i),
+      y: CHART_HEIGHT - 10,
+      fill: "var(--text-muted)",
+      "font-family": "var(--font-mono)",
+      "font-size": "10",
+      "text-anchor": "middle",
+    });
+    text.textContent = formatBucketLabel(b.bucket);
+    svg.appendChild(text);
+  });
+
+  const area = svgEl("path", { d: areaPath, fill: "var(--accent)", opacity: "0.18" });
+  svg.appendChild(area);
+
+  const line = svgEl("path", { d: linePath, fill: "none", stroke: "var(--accent)", "stroke-width": "2" });
+  svg.appendChild(line);
+
+  // Invisible guide elements, moved into place on hover
+  const guideLine = svgEl("line", {
+    x1: 0,
+    x2: 0,
+    y1: innerTop,
+    y2: innerBottom,
+    stroke: "var(--text-muted)",
+    "stroke-width": "1",
+    "stroke-dasharray": "3,3",
+    opacity: "0",
+  });
+  svg.appendChild(guideLine);
+
+  const guideDot = svgEl("circle", { cx: 0, cy: 0, r: 4, fill: "var(--accent)", stroke: "var(--surface)", "stroke-width": "2", opacity: "0" });
+  svg.appendChild(guideDot);
+
+  // A transparent full-height rect per bucket makes hit-testing trivial: no
+  // need to compute distances, just which column the cursor is over.
+  buckets.forEach((b, i) => {
+    const hitX = xFor(i) - stepX / 2;
+    const hitRect = svgEl("rect", {
+      x: Math.max(hitX, 0),
+      y: 0,
+      width: stepX,
+      height: CHART_HEIGHT,
+      fill: "transparent",
+    });
+    hitRect.addEventListener("mouseenter", () => {
+      const x = xFor(i);
+      const y = yFor(b.views);
+      guideLine.setAttribute("x1", x);
+      guideLine.setAttribute("x2", x);
+      guideLine.setAttribute("opacity", "1");
+      guideDot.setAttribute("cx", x);
+      guideDot.setAttribute("cy", y);
+      guideDot.setAttribute("opacity", "1");
+
+      tooltip.innerHTML = `<strong>${formatBucketLabel(b.bucket)}</strong><br>${b.views} views &middot; ${b.visitors} visitors`;
+      tooltip.style.left = `${(x / CHART_WIDTH) * 100}%`;
+      tooltip.style.top = `${(y / CHART_HEIGHT) * 100}%`;
+      tooltip.classList.remove("hidden");
+    });
+    svg.appendChild(hitRect);
+  });
+
+  svg.addEventListener("mouseleave", () => {
+    guideLine.setAttribute("opacity", "0");
+    guideDot.setAttribute("opacity", "0");
+    tooltip.classList.add("hidden");
+  });
+}
+
+function renderTable(tableId, items, options = {}) {
+  const { formatLabel, linkHref } = options;
   const tbody = document.querySelector(`#${tableId} tbody`);
   if (!items || items.length === 0) {
     tbody.innerHTML = `<tr><td class="label muted" colspan="2">No data yet</td></tr>`;
     return;
   }
   tbody.innerHTML = items
-    .map(
-      (item) =>
-        `<tr><td class="label" title="${item.label}">${formatLabel ? formatLabel(item.label) : item.label}</td><td class="value">${item.views}</td></tr>`
-    )
+    .map((item) => {
+      const text = formatLabel ? formatLabel(item.label) : item.label;
+      const cellContent = linkHref
+        ? `<a href="${linkHref(item.label)}" target="_blank" rel="noopener noreferrer">${text}</a>`
+        : text;
+      return `<tr><td class="label" title="${item.label}">${cellContent}</td><td class="value">${item.views}</td></tr>`;
+    })
     .join("");
 }
 
@@ -342,8 +547,19 @@ async function loadBreakdowns() {
     api(`/devices?${q}&dimension=device_type`),
   ]);
 
-  renderTable("table-pages", pages.items, (label) => new URL(label, "https://x.invalid").pathname || label);
-  renderTable("table-referrers", referrers.items);
+  renderTable("table-pages", pages.items, {
+    formatLabel: (label) => {
+      try {
+        return new URL(label).pathname || label;
+      } catch {
+        return label;
+      }
+    },
+    linkHref: (label) => label,
+  });
+  renderTable("table-referrers", referrers.items, {
+    linkHref: (label) => `https://${label}`,
+  });
   renderTable("table-search-engines", searchEngines.items);
   renderTable("table-countries", countries.items);
   renderTable("table-browsers", browsers.items);
