@@ -24,7 +24,7 @@ id = "f628561c8b3b40e2ae2e2eb8864d11f2"
 # doesn't grow forever. Runs every Sunday at 03:00 UTC. Cron triggers are free
 # on all Workers plans, including the free tier.
 [triggers]
-crons = ["0 3 * * 0"]
+crons = ["0 3 * * SUN"]
 
 # Secrets (set with `wrangler secret put NAME`, never store real values here):
 #   JWT_SECRET      -> random 32+ character string, used to sign admin login tokens
