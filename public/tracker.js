@@ -69,6 +69,23 @@
     }
   }
 
+  // Public API for custom events/goals, e.g.:
+  //   agEvent("signup");
+  //   agEvent("purchase", { plan: "pro", amount: 29 });
+  // `props` is optional and is stored as-is (JSON), for later reference in
+  // the dashboard's "Custom events" panel. Keep it small and non-sensitive —
+  // this is not meant for PII.
+  window.agEvent = function (name, props) {
+    if (!name) return;
+    send("/track", {
+      site: site,
+      sessionId: sessionId,
+      name: String(name),
+      url: location.href,
+      props: props || null,
+    });
+  };
+
   trackPageView();
   // 45s heartbeat: frequent enough for the "online now" indicator to feel
   // live, spaced out enough to stay comfortably inside free-tier database quotas.

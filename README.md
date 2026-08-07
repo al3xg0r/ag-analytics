@@ -138,7 +138,13 @@ npm run db:migrate:remote
 ```
 
 This runs `migrations/0001_init.sql` against your new D1 database — it creates the `sites`,
-`visits`, `sessions`, and `admins` tables. You never have to write or run SQL by hand again.
+`visits`, `sessions`, `events`, and `admins` tables. You never have to write or run SQL by hand
+again.
+
+> **Already deployed before and upgrading?** This file only ever *creates* tables/indexes that
+> don't exist yet (`CREATE TABLE IF NOT EXISTS`), so it's always safe to re-run — it won't touch
+> or delete your existing data. Re-run it any time you pull a newer version of this project to
+> pick up new tables (like `events`, added for the custom-events feature).
 
 ### Step 8 — Set your login secret
 
@@ -197,18 +203,28 @@ That's it. No terminal, no SQL, no Docker, no VPS from this point on.
 - **Delete** removes the selected site and all of its collected data, after a confirmation prompt.
 - **Period tabs** switch between Today, Yesterday, 7 days, 30 days, 12 months, and All time.
 - **Online now** (top right, with the pulsing dot) is the only number that updates in real time
-  (polled every 60 seconds); everything else refreshes when you change the site or period.
+  (polled every 60 seconds, and never affected by the 15-minute dashboard cache — see section 9);
+  everything else refreshes when you change the site or period.
+- **Stat cards** each show a small delta underneath (e.g. "↑ 12% vs previous period"), comparing
+  the selected period to the immediately preceding window of the same length. There's no
+  comparison for "All time", since there's no "previous" window to compare it to.
 - **Chart**: hover anywhere on it to see the exact time bucket, page views, and unique visitors at
   that point, with a crosshair and gridlines for scale.
 - **⚙ Customize** (top right) lets you show or hide individual panels (Top pages, Referrers,
-  Search engines, Countries, Browsers, Operating systems, Devices). Your choice is saved in the
-  browser, per device.
+  Search engines, Campaigns, Countries, Browsers, Operating systems, Devices, Custom events). Your
+  choice is saved in the browser, per device.
 - **Top pages** entries are clickable links that open the actual page; **Referrers** entries link
-  to the referring site.
-- **Top pages / Referrers / Search engines / Countries / Browsers / Operating systems / Devices**
-  are ranked tables for the selected site and period. Search engine traffic (Google, Bing,
-  DuckDuckGo, Brave Search, Yahoo, Yandex) is shown in its own panel, separate from regular
-  referring websites, so you can see at a glance where search traffic comes from.
+  to the referring site and show its favicon (fetched from DuckDuckGo's icon service when you view
+  the dashboard — this is a request from your own browser, as the admin, and has no effect on
+  visitor privacy or tracking); **Countries** show a flag and the full country name.
+- **Campaigns** breaks visits down by `utm_campaign` (see section 6's "UTM" notes below), so you
+  can see whether a specific marketing campaign is actually sending traffic.
+- **Custom events** shows counts for any event fired via `agEvent(...)` — see the "Custom events"
+  box in section 6.
+- Known bots, crawlers, and scripted HTTP clients (search engine crawlers, uptime monitors, SEO
+  tools, `curl`/`wget`/headless browsers, etc.) are filtered out **before** they're recorded
+  anywhere, so they never inflate any of the numbers above. This isn't perfect — no User-Agent
+  filter ever is — but it covers the traffic that actually shows up on most sites.
 - The **theme toggle** switches between the default light theme and a dark theme; your choice is
   remembered in the browser.
 
@@ -223,16 +239,19 @@ from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 |--------|------------------|--------|--------------------------------------------|
 | POST   | `/event`         | none   | Records one page view (called by tracker.js) |
 | POST   | `/ping`          | none   | Keeps a visitor's session marked "online" |
+| POST   | `/track`         | none   | Records one custom event (called by `agEvent()`) |
 | GET    | `/auth/status`   | none   | Tells the frontend if first-run setup is needed |
 | POST   | `/auth/setup`    | none*  | Creates the first admin account (works once) |
 | POST   | `/auth/login`    | none   | Returns a JWT for the dashboard           |
-| GET    | `/dashboard`     | admin  | Summary numbers for a site + period (cached) |
+| GET    | `/dashboard`     | admin  | Summary numbers for a site + period, with a comparison to the previous period (cached) |
 | GET    | `/online`        | admin  | Visitors online right now (never cached, cheap) |
 | GET    | `/stats`         | admin  | Time-series data for the chart            |
 | GET    | `/pages`         | admin  | Top pages                                 |
 | GET    | `/countries`     | admin  | Visits by country                         |
 | GET    | `/referrers`     | admin  | Visits by referring website (search engines excluded) |
 | GET    | `/search-engines`| admin  | Visits by search engine (Google, Bing, DuckDuckGo, etc.) |
+| GET    | `/campaigns`     | admin  | Visits by `utm_campaign`                  |
+| GET    | `/events`        | admin  | Custom event counts by name               |
 | GET    | `/browsers`      | admin  | Visits by browser                         |
 | GET    | `/devices`       | admin  | Visits by `device_type`, `os`, or `screen_resolution` (`?dimension=`) |
 | GET    | `/sites`         | admin  | List all sites                            |
@@ -247,6 +266,32 @@ backward compatibility — new deployments and the current `tracker.js` use `/ev
 
 Every `GET` endpoint above (except `/sites` and `/online`) accepts `site_id` and `period` query
 parameters, where `period` is one of `today`, `yesterday`, `7d`, `30d`, `12m`, `all`.
+
+### Custom events
+
+Beyond automatic page-view tracking, `tracker.js` exposes a global `agEvent()` function you can
+call from your own site's code to track goals/conversions:
+
+```html
+<script>
+  // No arguments beyond a name: just counts how many times it fired
+  agEvent("newsletter_signup");
+
+  // With optional metadata, stored as JSON and visible per-event in the database
+  // (not currently broken down by property in the dashboard — just by event name)
+  agEvent("purchase", { plan: "pro", amount: 29 });
+</script>
+```
+
+`agEvent()` is only defined after `tracker.js` has loaded, so call it from your own event
+handlers (e.g. a form's submit handler or a button's click handler), not at the top of the page.
+
+### UTM tags and campaign tracking
+
+Standard UTM query parameters on any incoming link (`?utm_source=twitter&utm_medium=social&utm_campaign=launch`)
+are captured automatically — no setup needed. `utm_campaign` shows up in the **Campaigns** panel;
+`utm_source` and `utm_medium` are stored too (visible via direct D1 queries) but don't have their
+own dashboard panel yet.
 
 ---
 
@@ -309,6 +354,19 @@ sharing that KV namespace would be affected too. That has been fixed:
   further if you're close to a quota, lower it if you want fresher numbers and have headroom.
 - **The dashboard only polls `/online`** (a single cheap query) every 60 seconds while open; it no
   longer re-fetches the full dashboard just to refresh that one number.
+- **Old data is deleted automatically.** A scheduled Worker (see `scheduled()` in `src/index.js`,
+  configured via `[triggers]` in `wrangler.toml`) runs weekly and deletes visits, sessions, and
+  custom events older than 396 days (13 months — one full month more than the longest dashboard
+  period, "12 months"). Cron triggers are free on every Workers plan, including free. Change the
+  `RETENTION_DAYS` constant at the top of `src/index.js` to keep data for a shorter or longer
+  window, and adjust the schedule itself in `wrangler.toml` (`crons = ["0 3 * * 0"]`, currently
+  every Sunday at 03:00 UTC) if you want it to run more or less often. D1's free plan includes
+  5GB of storage — without cleanup, a high-traffic site could eventually approach that limit.
+- **Pages are grouped by path, not by full URL.** If your host serves the same site from more than
+  one hostname (a custom domain plus an auto-generated preview/gateway URL — common with static
+  site hosts and IPFS-style platforms), a visit to `/blog/post` is recorded as `/blog/post`
+  regardless of which hostname it came in on, so it doesn't fragment into separate rows in
+  **Top pages**. Links in the dashboard are rebuilt using the site's own registered domain.
 
 If you are on Cloudflare's free plan and expect meaningful traffic, KV writes are now the least of
 your concerns — watch your **D1 row reads/writes** and **Worker request count** instead, both of

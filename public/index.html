@@ -88,10 +88,26 @@
       </header>
 
       <section class="stat-cards">
-        <div class="card"><div class="card-label">Unique visitors</div><div class="card-value" id="stat-visitors">0</div></div>
-        <div class="card"><div class="card-label">Page views</div><div class="card-value" id="stat-views">0</div></div>
-        <div class="card"><div class="card-label">Avg. time on site</div><div class="card-value" id="stat-time">0s</div></div>
-        <div class="card"><div class="card-label">Bounce rate</div><div class="card-value" id="stat-bounce">0%</div></div>
+        <div class="card">
+          <div class="card-label">Unique visitors</div>
+          <div class="card-value" id="stat-visitors">0</div>
+          <div class="card-delta" id="delta-visitors"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Page views</div>
+          <div class="card-value" id="stat-views">0</div>
+          <div class="card-delta" id="delta-views"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Avg. time on site</div>
+          <div class="card-value" id="stat-time">0s</div>
+          <div class="card-delta" id="delta-time"></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Bounce rate</div>
+          <div class="card-value" id="stat-bounce">0%</div>
+          <div class="card-delta" id="delta-bounce"></div>
+        </div>
       </section>
 
       <section class="chart-panel">
@@ -112,6 +128,10 @@
           <div class="panel-title">Search engines</div>
           <table id="table-search-engines"><tbody></tbody></table>
         </div>
+        <div class="panel" data-panel="campaigns">
+          <div class="panel-title">Campaigns</div>
+          <table id="table-campaigns"><tbody></tbody></table>
+        </div>
         <div class="panel" data-panel="countries">
           <div class="panel-title">Countries</div>
           <table id="table-countries"><tbody></tbody></table>
@@ -127,6 +147,10 @@
         <div class="panel" data-panel="devices">
           <div class="panel-title">Devices</div>
           <table id="table-devices"><tbody></tbody></table>
+        </div>
+        <div class="panel" data-panel="events">
+          <div class="panel-title">Custom events</div>
+          <table id="table-events"><tbody></tbody></table>
         </div>
       </section>
     </main>
@@ -175,10 +199,12 @@
         <label class="checkbox-row"><input type="checkbox" name="panel" value="pages" checked /> Top pages</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="referrers" checked /> Referrers</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="search-engines" checked /> Search engines</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="campaigns" checked /> Campaigns</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="countries" checked /> Countries</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="browsers" checked /> Browsers</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="os" checked /> Operating systems</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="devices" checked /> Devices</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="events" checked /> Custom events</label>
         <div class="modal-actions">
           <button type="button" id="btn-close-customize">Done</button>
         </div>

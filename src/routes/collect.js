@@ -1,5 +1,5 @@
 import { getSiteById, insertVisit, upsertSession } from "../lib/db.js";
-import { parseBrowser, parseOS, parseDeviceType } from "../lib/ua-parser.js";
+import { parseBrowser, parseOS, parseDeviceType, isBot } from "../lib/ua-parser.js";
 import { parseReferrer, extractUtm, normalizePagePath } from "../lib/utm.js";
 import { buildVisitorHash } from "../lib/visitor.js";
 import { json, noContent } from "../lib/response.js";
@@ -24,6 +24,14 @@ export async function handleCollect(request, env) {
   }
 
   const userAgent = request.headers.get("User-Agent") || "";
+
+  // Known crawlers, uptime monitors, and scripted HTTP clients never count as
+  // a "visitor" — accept-and-drop, same as the disabled-site case above, so a
+  // bot gets no signal either way about whether it was detected.
+  if (isBot(userAgent)) {
+    return noContent();
+  }
+
   const country = request.cf?.country || "Unknown";
   const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
 

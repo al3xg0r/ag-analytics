@@ -6,7 +6,7 @@ const API = ""; // same-origin: the Worker serves both the API and this file
 const TOKEN_KEY = "ag_admin_token";
 const THEME_KEY = "ag_theme";
 const PANELS_KEY = "ag_visible_panels";
-const ALL_PANELS = ["pages", "referrers", "search-engines", "countries", "browsers", "os", "devices"];
+const ALL_PANELS = ["pages", "referrers", "search-engines", "campaigns", "countries", "browsers", "os", "devices", "events"];
 
 let state = {
   sites: [],
@@ -343,6 +343,27 @@ async function loadDashboard() {
   document.getElementById("stat-time").textContent = formatSeconds(data.avg_time_seconds);
   document.getElementById("stat-bounce").textContent = `${data.bounce_rate}%`;
   document.getElementById("online-count").textContent = data.online;
+
+  renderDelta("delta-visitors", data.change?.unique_visitors);
+  renderDelta("delta-views", data.change?.page_views);
+  renderDelta("delta-time", data.change?.avg_time_seconds);
+  renderDelta("delta-bounce", data.change?.bounce_rate);
+}
+
+// Shows "+12% vs previous period" (or a down arrow for a drop) under a stat
+// card. "vs previous period" always means the immediately preceding window
+// of the same length (e.g. 7 days vs the 7 days before that).
+function renderDelta(elementId, change) {
+  const el = document.getElementById(elementId);
+  if (change === null || change === undefined) {
+    el.textContent = "";
+    el.className = "card-delta";
+    return;
+  }
+  const direction = change > 0 ? "up" : change < 0 ? "down" : "flat";
+  const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "→";
+  el.textContent = `${arrow} ${Math.abs(change)}% vs previous period`;
+  el.className = `card-delta ${direction}`;
 }
 
 // Separate, lightweight call: polled far more often than the rest of the
@@ -518,7 +539,7 @@ function drawChart(buckets) {
 }
 
 function renderTable(tableId, items, options = {}) {
-  const { formatLabel, linkHref } = options;
+  const { formatLabel, linkHref, icon } = options;
   const tbody = document.querySelector(`#${tableId} tbody`);
   if (!items || items.length === 0) {
     tbody.innerHTML = `<tr><td class="label muted" colspan="2">No data yet</td></tr>`;
@@ -527,17 +548,36 @@ function renderTable(tableId, items, options = {}) {
   tbody.innerHTML = items
     .map((item) => {
       const text = formatLabel ? formatLabel(item.label) : item.label;
+      const iconHtml = icon ? icon(item.label) : "";
+      const inner = iconHtml + text;
       const cellContent = linkHref
-        ? `<a href="${linkHref(item.label)}" target="_blank" rel="noopener noreferrer">${text}</a>`
-        : text;
+        ? `<a href="${linkHref(item.label)}" target="_blank" rel="noopener noreferrer">${inner}</a>`
+        : inner;
       return `<tr><td class="label" title="${item.label}">${cellContent}</td><td class="value">${item.views}</td></tr>`;
     })
     .join("");
 }
 
+// Converts a 2-letter ISO country code (as returned by Cloudflare, e.g. "US")
+// into its flag emoji, purely client-side. Falls back to the code itself for
+// anything that isn't a real 2-letter code ("Unknown", etc).
+function countryFlag(code) {
+  if (!/^[A-Z]{2}$/i.test(code)) return "";
+  const base = 127397; // regional indicator symbol offset
+  return String.fromCodePoint(...code.toUpperCase().split("").map((c) => c.charCodeAt(0) + base));
+}
+
+function countryName(code) {
+  try {
+    return new Intl.DisplayNames([navigator.language || "en"], { type: "region" }).of(code.toUpperCase());
+  } catch {
+    return code;
+  }
+}
+
 async function loadBreakdowns() {
   const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=8`;
-  const [pages, referrers, searchEngines, countries, browsers, os, devices] = await Promise.all([
+  const [pages, referrers, searchEngines, countries, browsers, os, devices, campaigns, events] = await Promise.all([
     api(`/pages?${q}`),
     api(`/referrers?${q}`),
     api(`/search-engines?${q}`),
@@ -545,26 +585,33 @@ async function loadBreakdowns() {
     api(`/browsers?${q}`),
     api(`/devices?${q}&dimension=os`),
     api(`/devices?${q}&dimension=device_type`),
+    api(`/campaigns?${q}`),
+    api(`/events?${q}`),
   ]);
 
+  const currentSite = state.sites.find((s) => s.id === state.currentSiteId);
+  const siteOrigin = currentSite ? `https://${currentSite.domain}` : "";
+
   renderTable("table-pages", pages.items, {
-    formatLabel: (label) => {
-      try {
-        return new URL(label).pathname || label;
-      } catch {
-        return label;
-      }
-    },
-    linkHref: (label) => label,
+    // visits.url is stored as a normalized path (e.g. "/blog/post"), not a full
+    // URL — see lib/utm.js normalizePagePath for why. Rebuild the real link
+    // using the site's own registered domain.
+    linkHref: (label) => siteOrigin + label,
   });
   renderTable("table-referrers", referrers.items, {
+    icon: (label) => `<img class="favicon" src="https://icons.duckduckgo.com/ip3/${label}.ico" alt="" loading="lazy" />`,
     linkHref: (label) => `https://${label}`,
   });
   renderTable("table-search-engines", searchEngines.items);
-  renderTable("table-countries", countries.items);
+  renderTable("table-countries", countries.items, {
+    icon: (label) => `<span class="flag">${countryFlag(label)}</span>`,
+    formatLabel: (label) => countryName(label) || label,
+  });
   renderTable("table-browsers", browsers.items);
   renderTable("table-os", os.items);
   renderTable("table-devices", devices.items);
+  renderTable("table-campaigns", campaigns.items);
+  renderTable("table-events", events.items);
 }
 
 // Refresh only the "online now" number regularly. Everything else only

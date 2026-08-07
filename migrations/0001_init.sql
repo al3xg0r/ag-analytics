@@ -61,6 +61,22 @@ CREATE TABLE IF NOT EXISTS sessions (
   FOREIGN KEY (site_id) REFERENCES sites (id)
 );
 
+-- Custom events / goals (e.g. "signup", "purchase"), reported manually by the
+-- site owner via window.agEvent(name, props) — see public/tracker.js.
+-- Separate from `visits` on purpose: not every page load is an event, and not
+-- every event happens on a page load.
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  site_id TEXT NOT NULL,
+  session_id TEXT,
+  visitor_hash TEXT NOT NULL,
+  name TEXT NOT NULL,
+  url TEXT,
+  props TEXT,                       -- optional JSON-encoded key/value metadata
+  created_at INTEGER NOT NULL,
+  FOREIGN KEY (site_id) REFERENCES sites (id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_visits_site_created ON visits (site_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_visits_site_url ON visits (site_id, url);
 CREATE INDEX IF NOT EXISTS idx_visits_site_country ON visits (site_id, country);
@@ -69,3 +85,5 @@ CREATE INDEX IF NOT EXISTS idx_visits_site_browser ON visits (site_id, browser);
 CREATE INDEX IF NOT EXISTS idx_visits_site_os ON visits (site_id, os);
 CREATE INDEX IF NOT EXISTS idx_visits_site_device ON visits (site_id, device_type);
 CREATE INDEX IF NOT EXISTS idx_sessions_site ON sessions (site_id, last_seen);
+CREATE INDEX IF NOT EXISTS idx_events_site_created ON events (site_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_events_site_name ON events (site_id, name);
