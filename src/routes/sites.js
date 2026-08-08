@@ -44,7 +44,7 @@ export async function handleCreateSite(request, env) {
     name: site.name,
     domain: site.domain,
     api_key: site.apiKey,
-    tracking_snippet: `<script defer src="${new URL(request.url).origin}/tracker.js" data-site="${site.id}"></script>`,
+    tracking_snippet: `<script defer src="${new URL(request.url).origin}/widget.js" data-site="${site.id}"></script>`,
   });
 }
 

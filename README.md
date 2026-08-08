@@ -15,14 +15,14 @@ to be deployed by someone with **zero Cloudflare experience** in about 5 minutes
 - One Worker handles the tracking API, the admin API, and serves the dashboard.
 - One D1 database (SQLite, serverless) stores everything.
 - One KV namespace caches expensive dashboard queries for 15 minutes.
-- One tiny `tracker.js` script (no cookies, no fingerprinting) is pasted into any website.
+- One tiny `widget.js` script (no cookies, no fingerprinting) is pasted into any website.
 - One dashboard (plain HTML/CSS/JS, no build step) lets you view the stats and manage sites.
 
 ```
 GitHub  →  Cloudflare Worker  →  D1 (data)  +  KV (cache)
                  ▲
                  │
-     tracker.js on your websites
+     widget.js on your websites
 ```
 
 ### What data is collected
@@ -131,6 +131,9 @@ id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
 
 Save the file.
 
+> `wrangler.toml` also ships with a `[triggers]` section (a weekly cleanup job, see section 9) —
+> that part is already complete and doesn't need editing, it's unrelated to the two IDs above.
+
 ### Step 7 — Create the database tables
 
 ```bash
@@ -181,7 +184,7 @@ entire analytics platform — API, dashboard, and tracker script, all on one URL
 
    ```html
    <script defer
-     src="https://ag-analytics.your-subdomain.workers.dev/tracker.js"
+     src="https://ag-analytics.your-subdomain.workers.dev/widget.js"
      data-site="my-site-ab12cd">
    </script>
    ```
@@ -237,7 +240,7 @@ from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 
 | Method | Path             | Auth   | Purpose                                   |
 |--------|------------------|--------|--------------------------------------------|
-| POST   | `/event`         | none   | Records one page view (called by tracker.js) |
+| POST   | `/event`         | none   | Records one page view (called by widget.js) |
 | POST   | `/ping`          | none   | Keeps a visitor's session marked "online" |
 | POST   | `/track`         | none   | Records one custom event (called by `agEvent()`) |
 | GET    | `/auth/status`   | none   | Tells the frontend if first-run setup is needed |
@@ -262,14 +265,19 @@ from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 `*` `/auth/setup` disables itself automatically once the first admin account exists.
 
 `/collect` and `/heartbeat` are kept working as aliases for `/event` and `/ping` respectively, for
-backward compatibility — new deployments and the current `tracker.js` use `/event`/`/ping`.
+backward compatibility — new deployments and the current `widget.js` use `/event`/`/ping`.
+
+Likewise, the script file itself was renamed from `tracker.js` to `widget.js` (same reasoning:
+avoiding ad-blocker filter-list patterns). `/tracker.js` is still served — internally aliased to
+`/widget.js` — so any site with an already-embedded old snippet keeps working without changes.
+New sites get a `/widget.js` snippet from the **Code**/**+ Add site** buttons.
 
 Every `GET` endpoint above (except `/sites` and `/online`) accepts `site_id` and `period` query
 parameters, where `period` is one of `today`, `yesterday`, `7d`, `30d`, `12m`, `all`.
 
 ### Custom events
 
-Beyond automatic page-view tracking, `tracker.js` exposes a global `agEvent()` function you can
+Beyond automatic page-view tracking, `widget.js` exposes a global `agEvent()` function you can
 call from your own site's code to track goals/conversions:
 
 ```html
@@ -283,7 +291,7 @@ call from your own site's code to track goals/conversions:
 </script>
 ```
 
-`agEvent()` is only defined after `tracker.js` has loaded, so call it from your own event
+`agEvent()` is only defined after `widget.js` has loaded, so call it from your own event
 handlers (e.g. a form's submit handler or a button's click handler), not at the top of the page.
 
 ### UTM tags and campaign tracking
@@ -299,7 +307,7 @@ own dashboard panel yet.
 
 ```
 ag-analytics/
-├── wrangler.toml          Cloudflare configuration (D1, KV, static assets)
+├── wrangler.toml          Cloudflare configuration (D1, KV, static assets, weekly cleanup cron)
 ├── package.json           npm scripts (dev, deploy, migrate)
 ├── migrations/
 │   └── 0001_init.sql      Database schema
@@ -308,7 +316,7 @@ ag-analytics/
 │   ├── lib/                Shared helpers (auth, db, kv, parsing)
 │   └── routes/              One file per API endpoint
 └── public/
-    ├── tracker.js         The script embedded on tracked websites
+    ├── widget.js         The script embedded on tracked websites
     ├── favicon.svg        Dashboard favicon (drop in your own file to replace it)
     ├── index.html         Dashboard shell
     ├── style.css          Dashboard design
@@ -383,13 +391,19 @@ If you visit your own site and don't see it show up, check these in order:
    only the dashboard's *summary* lags. Switching periods or waiting it out will show it.
 2. **Ad blockers and privacy extensions.** This is the most common cause of "missing" visits on
    any self-hosted analytics tool. Many blocklists (EasyPrivacy and similar) specifically target
-   generic analytics-looking paths such as `/collect`. AG Analytics' tracker now calls `/event` and
-   `/ping` instead, specifically to avoid this — but a browser with aggressive tracking protection
-   (Brave Shields, uBlock Origin with strict lists, Safari ITP, some VPN/DNS-level blockers) can
-   still block it. Open your browser's DevTools → Network tab, reload the page, and check whether
-   a request to `/event` actually happens and returns `200`/`204`. If it's blocked or missing
-   entirely, that visitor's browser is filtering it — this is expected, privacy-respecting behavior
-   on their end, not a bug in the tracker.
+   generic analytics-looking paths and filenames — `/collect`, `tracker.js`, domains/subdomains
+   containing words like "analytics", "track", "stat", "pixel". AG Analytics avoids the obvious
+   ones out of the box (`/event`/`/ping` instead of `/collect`/`/heartbeat`, `widget.js` instead of
+   `tracker.js`), but a browser with aggressive tracking protection (Brave Shields, uBlock Origin
+   with strict lists, Safari ITP, some VPN/DNS-level blockers) can still block a `*.workers.dev`
+   subdomain if it happens to contain a flagged word (e.g. a Worker literally named
+   `ag-analytics.workers.dev`). If that's happening, the most effective fix is serving the Worker
+   from **your own custom domain/subdomain** instead of `*.workers.dev` — see "Custom domains"
+   below. Open your browser's DevTools → Network tab, reload the page, and check whether a request
+   to `/event` actually happens and returns `200`/`204`. If it's blocked or missing entirely,
+   that visitor's browser is filtering it — this is expected, privacy-respecting behavior on their
+   end, not a bug in the tracker. No self-hosted (or hosted) analytics tool gets 100% of visits for
+   this reason — some level of loss from ad blockers is normal.
 3. **The tracking snippet isn't actually live on the page.** Some site builders/CMSs only save
    custom code in a draft or preview, not the published site. View the page's source (Ctrl+U /
    Cmd+Option+U) on the live URL and confirm the `<script>` tag from **Code** in the dashboard
@@ -399,6 +413,26 @@ If you visit your own site and don't see it show up, check these in order:
    visit happens on the second one, it is still recorded — just under that URL. Check whether the
    visit appears under a different entry in **Top pages**/referrers before assuming it wasn't
    recorded at all.
+
+### Custom domains (recommended)
+
+Serving AG Analytics from `*.workers.dev` works, but that shared domain is a generic target for
+ad-blocker filter lists. Pointing your own subdomain at the Worker instead — e.g. `st.example.com`
+— makes it look like any other first/third-party subdomain of your own site, which meaningfully
+reduces (though never eliminates) ad-blocker false positives.
+
+1. Your domain needs to be on Cloudflare already (DNS managed through Cloudflare) — if you're
+   using Cloudflare Workers at all, it likely already is.
+2. Cloudflare Dashboard → **Workers & Pages → your Worker → Settings → Domains & Routes →
+   Custom Domains → Add**. Enter a subdomain, e.g. `st.example.com` (avoid words like "analytics",
+   "track", "stat", "pixel", "metric" in the subdomain itself for the same reason).
+3. Cloudflare provisions the DNS record and TLS certificate automatically — this can take a minute.
+4. From then on, visit the dashboard at your new custom domain instead of the `*.workers.dev` one.
+   Every tracking snippet generated from the **Code**/**+ Add site** buttons automatically uses
+   whatever domain you're currently viewing the dashboard from, so no code changes are needed —
+   just update the `<script src="...">` on each of your tracked sites to point at the new domain.
+5. The old `*.workers.dev` URL keeps working side by side unless you explicitly remove it, so you
+   can migrate sites one at a time with no downtime.
 
 ---
 

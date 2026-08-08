@@ -4,7 +4,7 @@ import { buildVisitorHash } from "../lib/visitor.js";
 import { json, noContent } from "../lib/response.js";
 
 // Custom events are opt-in and manually fired by the site owner's own code,
-// e.g. `agEvent("signup", { plan: "pro" })` — see public/tracker.js. This is
+// e.g. `agEvent("signup", { plan: "pro" })` — see public/widget.js. This is
 // how goals/conversions are tracked, as opposed to /event which fires
 // automatically on every page view.
 const MAX_NAME_LENGTH = 100;

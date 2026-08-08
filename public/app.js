@@ -249,7 +249,7 @@ document.getElementById("btn-delete-site").addEventListener("click", async () =>
 // ---------- view tracking code (available any time, not just right after creating a site) ----------
 
 function buildTrackingSnippet(siteId) {
-  return `<script defer src="${location.origin}/tracker.js" data-site="${siteId}"></scr` + `ipt>`;
+  return `<script defer src="${location.origin}/widget.js" data-site="${siteId}"></scr` + `ipt>`;
 }
 
 document.getElementById("btn-view-code").addEventListener("click", () => {
