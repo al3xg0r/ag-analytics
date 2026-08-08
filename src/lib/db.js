@@ -42,6 +42,10 @@ export async function renameSite(db, siteId, name) {
   await db.prepare("UPDATE sites SET name = ? WHERE id = ?").bind(name, siteId).run();
 }
 
+export async function updateSiteDomain(db, siteId, domain) {
+  await db.prepare("UPDATE sites SET domain = ? WHERE id = ?").bind(domain, siteId).run();
+}
+
 export async function regenerateApiKey(db, siteId, newApiKey) {
   await db.prepare("UPDATE sites SET api_key = ? WHERE id = ?").bind(newApiKey, siteId).run();
 }

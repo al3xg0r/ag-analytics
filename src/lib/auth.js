@@ -36,6 +36,26 @@ export function generateSiteId(name) {
   return `${slug || "site"}-${suffix}`;
 }
 
+// Accepts whatever a person pastes into the "Domain" field ("example.com",
+// "https://example.com/", "http://www.example.com/some/path") and reduces it
+// to a bare hostname. Without this, a domain saved with a protocol already in
+// it produces double-prefixed links later ("https://https://example.com")
+// wherever the dashboard builds a link from `https://${domain}`.
+export function normalizeDomain(input) {
+  if (!input) return input;
+  let value = input.trim();
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
+    value = `https://${value}`;
+  }
+  try {
+    return new URL(value).hostname;
+  } catch {
+    // Not a parseable URL even with a protocol prepended (e.g. garbage input):
+    // fall back to a simple strip so we still store *something* sane.
+    return input.trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "");
+  }
+}
+
 // Passwords are hashed with PBKDF2 (100k iterations, SHA-256), a random salt per password.
 // The stored string format is: pbkdf2$<iterations>$<salt-b64url>$<hash-b64url>
 export async function hashPassword(password) {

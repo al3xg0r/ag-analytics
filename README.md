@@ -359,7 +359,7 @@ sharing that KV namespace would be affected too. That has been fixed:
   custom events older than 396 days (13 months — one full month more than the longest dashboard
   period, "12 months"). Cron triggers are free on every Workers plan, including free. Change the
   `RETENTION_DAYS` constant at the top of `src/index.js` to keep data for a shorter or longer
-  window, and adjust the schedule itself in `wrangler.toml` (`crons = ["0 3 * * 0"]`, currently
+  window, and adjust the schedule itself in `wrangler.toml` (`crons = ["0 3 * * SUN"]`, currently
   every Sunday at 03:00 UTC) if you want it to run more or less often. D1's free plan includes
   5GB of storage — without cleanup, a high-traffic site could eventually approach that limit.
 - **Pages are grouped by path, not by full URL.** If your host serves the same site from more than

@@ -4,10 +4,11 @@ import {
   deleteSite,
   updateSiteStatus,
   renameSite,
+  updateSiteDomain,
   regenerateApiKey,
   getSiteById,
 } from "../lib/db.js";
-import { generateApiKey, generateSiteId } from "../lib/auth.js";
+import { generateApiKey, generateSiteId, normalizeDomain } from "../lib/auth.js";
 import { json, error } from "../lib/response.js";
 
 // GET /sites
@@ -31,7 +32,7 @@ export async function handleCreateSite(request, env) {
   const site = {
     id: generateSiteId(name),
     name,
-    domain,
+    domain: normalizeDomain(domain),
     description,
     apiKey: generateApiKey(),
   };
@@ -68,6 +69,7 @@ export async function handleUpdateSite(request, env, siteId) {
   }
 
   if (body.name) await renameSite(env.DB, siteId, body.name);
+  if (body.domain) await updateSiteDomain(env.DB, siteId, normalizeDomain(body.domain));
   if (body.status && ["active", "disabled"].includes(body.status)) {
     await updateSiteStatus(env.DB, siteId, body.status);
   }

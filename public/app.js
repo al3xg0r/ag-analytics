@@ -590,7 +590,12 @@ async function loadBreakdowns() {
   ]);
 
   const currentSite = state.sites.find((s) => s.id === state.currentSiteId);
-  const siteOrigin = currentSite ? `https://${currentSite.domain}` : "";
+  // Defensive: older/mistyped data may have a domain stored with a protocol
+  // already in it (e.g. "https://example.com" instead of "example.com").
+  // Strip it here so links never end up double-prefixed, regardless of
+  // what's actually in the database right now.
+  const cleanDomain = currentSite ? currentSite.domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "") : "";
+  const siteOrigin = cleanDomain ? `https://${cleanDomain}` : "";
 
   renderTable("table-pages", pages.items, {
     // visits.url is stored as a normalized path (e.g. "/blog/post"), not a full
