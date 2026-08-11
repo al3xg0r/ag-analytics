@@ -306,8 +306,8 @@ form > button[type="submit"] {
 .card-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
 .card-value { font-family: var(--font-mono); font-size: 28px; font-weight: 600; }
 .card-delta { font-family: var(--font-mono); font-size: 12px; margin-top: 6px; min-height: 15px; }
-.card-delta.up { color: var(--live); }
-.card-delta.down { color: var(--negative); }
+.card-delta.good { color: var(--live); }
+.card-delta.bad { color: var(--negative); }
 .card-delta.flat { color: var(--text-muted); }
 
 .chart-panel {

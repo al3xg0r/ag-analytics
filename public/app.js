@@ -347,23 +347,33 @@ async function loadDashboard() {
   renderDelta("delta-visitors", data.change?.unique_visitors);
   renderDelta("delta-views", data.change?.page_views);
   renderDelta("delta-time", data.change?.avg_time_seconds);
-  renderDelta("delta-bounce", data.change?.bounce_rate);
+  renderDelta("delta-bounce", data.change?.bounce_rate, { lowerIsBetter: true });
 }
 
-// Shows "+12% vs previous period" (or a down arrow for a drop) under a stat
+// Shows "↑ 12% vs previous period" (or a down arrow for a drop) under a stat
 // card. "vs previous period" always means the immediately preceding window
 // of the same length (e.g. 7 days vs the 7 days before that).
-function renderDelta(elementId, change) {
+//
+// The arrow always reflects the actual numeric direction of the change. The
+// *color*, however, reflects whether that change is good or bad — and that
+// depends on the metric: more visitors/views/time-on-site is good, but a
+// LOWER bounce rate is also good, so pass { lowerIsBetter: true } for it.
+function renderDelta(elementId, change, { lowerIsBetter = false } = {}) {
   const el = document.getElementById(elementId);
   if (change === null || change === undefined) {
     el.textContent = "";
     el.className = "card-delta";
     return;
   }
-  const direction = change > 0 ? "up" : change < 0 ? "down" : "flat";
-  const arrow = direction === "up" ? "↑" : direction === "down" ? "↓" : "→";
+  const arrow = change > 0 ? "↑" : change < 0 ? "↓" : "→";
+  let sentiment = "flat";
+  if (change !== 0) {
+    const increased = change > 0;
+    const isGood = lowerIsBetter ? !increased : increased;
+    sentiment = isGood ? "good" : "bad";
+  }
   el.textContent = `${arrow} ${Math.abs(change)}% vs previous period`;
-  el.className = `card-delta ${direction}`;
+  el.className = `card-delta ${sentiment}`;
 }
 
 // Separate, lightweight call: polled far more often than the rest of the
