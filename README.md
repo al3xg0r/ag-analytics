@@ -404,6 +404,15 @@ If you visit your own site and don't see it show up, check these in order:
    that visitor's browser is filtering it — this is expected, privacy-respecting behavior on their
    end, not a bug in the tracker. No self-hosted (or hosted) analytics tool gets 100% of visits for
    this reason — some level of loss from ad blockers is normal.
+
+   One less obvious case worth knowing about: in Chrome-based DevTools, look at the **Type**
+   column for the blocked request. If it says **"ping"** rather than "fetch"/"xhr", the request
+   was sent with `navigator.sendBeacon()`, which the browser itself tags as that resource type —
+   and several ad-blocker configurations (Brave Shields, some uBlock Origin lists) block *all*
+   `ping`-type requests outright, regardless of URL or domain. `widget.js` uses a plain
+   `fetch(..., { keepalive: true })` instead of `sendBeacon()` specifically to avoid this
+   category-based blocking; if you're testing against an older cached copy of `widget.js` you
+   may still see `ping`-type requests — hard-refresh (Ctrl/Cmd+Shift+R) to fetch the current one.
 3. **The tracking snippet isn't actually live on the page.** Some site builders/CMSs only save
    custom code in a draft or preview, not the published site. View the page's source (Ctrl+U /
    Cmd+Option+U) on the live URL and confirm the `<script>` tag from **Code** in the dashboard

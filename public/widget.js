@@ -40,17 +40,23 @@
 
   function send(path, payload) {
     var body = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
-      var blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon(endpoint + path, blob);
-    } else {
-      fetch(endpoint + path, {
-        method: "POST",
-        body: body,
-        headers: { "Content-Type": "application/json" },
-        keepalive: true,
-      }).catch(function () {});
-    }
+    // Deliberately using fetch(), not navigator.sendBeacon(). Beacon requests
+    // are tagged by the browser itself as resource type "ping", and a lot of
+    // ad-blocker configurations (Brave Shields, several uBlock Origin lists)
+    // block that entire request type outright, regardless of the URL or
+    // domain it's going to. A plain fetch() with keepalive is classified as
+    // an ordinary "fetch"/"xhr" request, which isn't singled out the same way.
+    fetch(endpoint + path, {
+      method: "POST",
+      body: body,
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      mode: "cors",
+    }).catch(function () {
+      // Best-effort: if this particular request fails (offline, blocked,
+      // page unloading before it completes), there's nothing useful to do —
+      // failing loudly would be worse than silently skipping one data point.
+    });
   }
 
   function trackPageView() {
