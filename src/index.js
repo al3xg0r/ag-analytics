@@ -53,76 +53,25 @@ const RETENTION_DAYS = 396;
 
 export default {
   async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const { pathname } = url;
-
     if (request.method === "OPTIONS") return handleOptions();
 
+    let response;
     try {
-      // Public, unauthenticated endpoints used by widget.js in visitors' browsers.
-      // "/event" and "/ping" are the primary names: generic analytics/tracking
-      // paths like "/collect" and "/heartbeat" are common targets in ad-blocker
-      // filter lists (EasyPrivacy and similar), which silently drops visits.
-      // "/collect" and "/heartbeat" are kept working as aliases so any
-      // already-deployed widget.js copy (which may still call the old paths
-      // if cached) keeps working too.
-      if ((pathname === "/event" || pathname === "/collect") && request.method === "POST") {
-        return handleCollect(request, env);
-      }
-      if ((pathname === "/ping" || pathname === "/heartbeat") && request.method === "POST") {
-        return handleHeartbeat(request, env);
-      }
-      // Custom events / goals, called manually by the site owner (e.g. agEvent("signup")).
-      if (pathname === "/track" && request.method === "POST") {
-        return handleTrackEvent(request, env);
-      }
-
-      // Admin auth endpoints
-      if (pathname === "/auth/status" && request.method === "GET") return handleAuthStatus(request, env);
-      if (pathname === "/auth/setup" && request.method === "POST") return handleSetup(request, env);
-      if (pathname === "/auth/login" && request.method === "POST") return handleLogin(request, env);
-
-      // Everything below requires a logged-in admin
-      if (isProtected(pathname)) {
-        const admin = await requireAdmin(request, env);
-        if (!admin) return error("Unauthorized", 401);
-      }
-
-      if (pathname === "/dashboard" && request.method === "GET") return handleDashboard(request, env);
-      if (pathname === "/online" && request.method === "GET") return handleOnline(request, env);
-      if (pathname === "/stats" && request.method === "GET") return handleStats(request, env);
-      if (pathname === "/pages" && request.method === "GET") return handlePages(request, env);
-      if (pathname === "/countries" && request.method === "GET") return handleCountries(request, env);
-      if (pathname === "/referrers" && request.method === "GET") return handleReferrers(request, env);
-      if (pathname === "/search-engines" && request.method === "GET") return handleSearchEngines(request, env);
-      if (pathname === "/campaigns" && request.method === "GET") return handleCampaigns(request, env);
-      if (pathname === "/events" && request.method === "GET") return handleEvents(request, env);
-      if (pathname === "/devices" && request.method === "GET") return handleDevices(request, env);
-      if (pathname === "/browsers" && request.method === "GET") return handleBrowsers(request, env);
-
-      if (pathname === "/sites" && request.method === "GET") return handleListSites(request, env);
-      if (pathname === "/sites" && request.method === "POST") return handleCreateSite(request, env);
-
-      const siteMatch = pathname.match(/^\/sites\/([^/]+)$/);
-      if (siteMatch && request.method === "DELETE") return handleDeleteSite(request, env, siteMatch[1]);
-      if (siteMatch && request.method === "PATCH") return handleUpdateSite(request, env, siteMatch[1]);
-
-      // Anything else falls back to the static dashboard files (HTML/CSS/JS).
-      // "/tracker.js" (the old public script name) is kept working as an alias
-      // for "/widget.js" — the file itself was renamed because "tracker.js" is
-      // a very common ad-blocker filter-list pattern, same reasoning as
-      // "/event"/"/ping" above. Any already-embedded <script src=".../tracker.js">
-      // on a live site keeps working; new snippets use "/widget.js".
-      if (pathname === "/tracker.js") {
-        const assetUrl = new URL(request.url);
-        assetUrl.pathname = "/widget.js";
-        return env.ASSETS.fetch(new Request(assetUrl, request));
-      }
-      return env.ASSETS.fetch(request);
+      response = await route(request, env);
     } catch (err) {
       console.error(err);
-      return error("Internal server error", 500);
+      response = error("Internal server error", 500);
     }
+
+    // Applied to every response regardless of path: this Worker (whichever
+    // domain it's served from — *.workers.dev or a custom domain) is a
+    // tracking backend and admin dashboard, never something meant to appear
+    // in search results. robots.txt asks crawlers nicely; this header is the
+    // belt-and-suspenders version that works even for crawlers that ignore it,
+    // and covers non-HTML responses (the API, widget.js) too.
+    const headers = new Headers(response.headers);
+    headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    return new Response(response.body, { status: response.status, headers });
   },
 
   // Runs on the schedule configured in wrangler.toml ([triggers] crons).
@@ -136,3 +85,69 @@ export default {
     );
   },
 };
+
+async function route(request, env) {
+  const url = new URL(request.url);
+  const { pathname } = url;
+
+  // Public, unauthenticated endpoints used by widget.js in visitors' browsers.
+  // "/event" and "/ping" are the primary names: generic analytics/tracking
+  // paths like "/collect" and "/heartbeat" are common targets in ad-blocker
+  // filter lists (EasyPrivacy and similar), which silently drops visits.
+  // "/collect" and "/heartbeat" are kept working as aliases so any
+  // already-deployed widget.js copy (which may still call the old paths
+  // if cached) keeps working too.
+  if ((pathname === "/event" || pathname === "/collect") && request.method === "POST") {
+    return handleCollect(request, env);
+  }
+  if ((pathname === "/ping" || pathname === "/heartbeat") && request.method === "POST") {
+    return handleHeartbeat(request, env);
+  }
+  // Custom events / goals, called manually by the site owner (e.g. agEvent("signup")).
+  if (pathname === "/track" && request.method === "POST") {
+    return handleTrackEvent(request, env);
+  }
+
+  // Admin auth endpoints
+  if (pathname === "/auth/status" && request.method === "GET") return handleAuthStatus(request, env);
+  if (pathname === "/auth/setup" && request.method === "POST") return handleSetup(request, env);
+  if (pathname === "/auth/login" && request.method === "POST") return handleLogin(request, env);
+
+  // Everything below requires a logged-in admin
+  if (isProtected(pathname)) {
+    const admin = await requireAdmin(request, env);
+    if (!admin) return error("Unauthorized", 401);
+  }
+
+  if (pathname === "/dashboard" && request.method === "GET") return handleDashboard(request, env);
+  if (pathname === "/online" && request.method === "GET") return handleOnline(request, env);
+  if (pathname === "/stats" && request.method === "GET") return handleStats(request, env);
+  if (pathname === "/pages" && request.method === "GET") return handlePages(request, env);
+  if (pathname === "/countries" && request.method === "GET") return handleCountries(request, env);
+  if (pathname === "/referrers" && request.method === "GET") return handleReferrers(request, env);
+  if (pathname === "/search-engines" && request.method === "GET") return handleSearchEngines(request, env);
+  if (pathname === "/campaigns" && request.method === "GET") return handleCampaigns(request, env);
+  if (pathname === "/events" && request.method === "GET") return handleEvents(request, env);
+  if (pathname === "/devices" && request.method === "GET") return handleDevices(request, env);
+  if (pathname === "/browsers" && request.method === "GET") return handleBrowsers(request, env);
+
+  if (pathname === "/sites" && request.method === "GET") return handleListSites(request, env);
+  if (pathname === "/sites" && request.method === "POST") return handleCreateSite(request, env);
+
+  const siteMatch = pathname.match(/^\/sites\/([^/]+)$/);
+  if (siteMatch && request.method === "DELETE") return handleDeleteSite(request, env, siteMatch[1]);
+  if (siteMatch && request.method === "PATCH") return handleUpdateSite(request, env, siteMatch[1]);
+
+  // Anything else falls back to the static dashboard files (HTML/CSS/JS).
+  // "/tracker.js" (the old public script name) is kept working as an alias
+  // for "/widget.js" — the file itself was renamed because "tracker.js" is
+  // a very common ad-blocker filter-list pattern, same reasoning as
+  // "/event"/"/ping" above. Any already-embedded <script src=".../tracker.js">
+  // on a live site keeps working; new snippets use "/widget.js".
+  if (pathname === "/tracker.js") {
+    const assetUrl = new URL(request.url);
+    assetUrl.pathname = "/widget.js";
+    return env.ASSETS.fetch(new Request(assetUrl, request));
+  }
+  return env.ASSETS.fetch(request);
+}
