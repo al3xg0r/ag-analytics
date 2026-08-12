@@ -103,5 +103,8 @@ export function normalizePagePath(url) {
   }
   for (const param of UTM_PARAM_NAMES) parsed.searchParams.delete(param);
   const search = parsed.searchParams.toString();
-  return parsed.pathname + (search ? `?${search}` : "");
+  // The hash fragment is kept on purpose: some sites use it for real
+  // navigation (hash-based routing, in-page section anchors like "#market"),
+  // so dropping it would merge genuinely different "pages" into one row.
+  return parsed.pathname + (search ? `?${search}` : "") + (parsed.hash || "");
 }
