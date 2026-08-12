@@ -73,9 +73,11 @@ function formatSeconds(totalSeconds) {
 async function boot() {
   applyStoredTheme();
 
+  const status = await api("/auth/status").catch(() => null);
+  renderVersionTag(status);
+
   if (!getToken()) {
-    const status = await api("/auth/status");
-    showView(status.setup_required ? "setup" : "login");
+    showView(status?.setup_required ? "setup" : "login");
     return;
   }
 
@@ -87,6 +89,19 @@ async function boot() {
   } catch (e) {
     showView("login");
   }
+}
+
+// Shows "vX.Y.Z-betaN · Aug 11, 2026" (or just the version, if no date is
+// configured) in the sidebar footer. Mainly useful for telling at a glance
+// whether the browser is showing a freshly deployed version or a stale
+// cached copy of the frontend after a deploy.
+function renderVersionTag(status) {
+  const el = document.getElementById("app-version");
+  if (!el || !status?.version) return;
+  const date = status.release_date
+    ? new Date(status.release_date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+    : null;
+  el.textContent = date ? `v${status.version} · ${date}` : `v${status.version}`;
 }
 
 // ---------- auth forms ----------

@@ -31,3 +31,9 @@ crons = ["0 3 * * SUN"]
 #   ADMIN_BOOTSTRAP -> one-time setup password, used only during the first admin creation
 [vars]
 APP_NAME = "AG Analytics"
+# Shown in the dashboard sidebar footer, purely informational — helps tell at
+# a glance whether you're looking at a freshly deployed version or a stale
+# cached copy of the frontend. Bump both alongside the version in package.json
+# whenever you cut a release.
+APP_VERSION = "0.2.0-beta.1"
+APP_RELEASE_DATE = "2026-08-11"

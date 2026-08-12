@@ -37,7 +37,11 @@ export async function handleSetup(request, env) {
 // Tells the dashboard whether first-run setup is still needed.
 export async function handleAuthStatus(request, env) {
   const existing = await env.DB.prepare("SELECT id FROM admins LIMIT 1").first();
-  return json({ setup_required: !existing });
+  return json({
+    setup_required: !existing,
+    version: env.APP_VERSION || null,
+    release_date: env.APP_RELEASE_DATE || null,
+  });
 }
 
 // POST /auth/login
