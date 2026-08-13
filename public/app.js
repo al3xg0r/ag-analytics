@@ -692,7 +692,7 @@ function countryName(code) {
 }
 
 async function loadBreakdowns() {
-  const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=8`;
+  const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=25`;
   const [pages, referrers, searchEngines, countries, browsers, os, devices, campaigns, events] = await Promise.all([
     api(`/pages?${q}`),
     api(`/referrers?${q}`),

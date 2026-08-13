@@ -381,6 +381,27 @@ form > button[type="submit"] {
 .panel.drag-over { border-color: var(--accent); }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+/* Panels show ~8 rows by default; anything beyond that scrolls instead of
+   growing the card. The scrollbar itself stays invisible until the panel is
+   hovered, so panels with few rows look identical to before — it only
+   appears as an affordance once there's actually more to scroll to. */
+.panel-scroll {
+  max-height: 280px; /* ~8 rows at the table's row height below */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.panel-scroll:hover {
+  scrollbar-color: var(--accent) transparent;
+}
+
+.panel-scroll::-webkit-scrollbar { width: 6px; }
+.panel-scroll::-webkit-scrollbar-track { background: transparent; }
+.panel-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; }
+.panel-scroll:hover::-webkit-scrollbar-thumb { background: var(--accent); }
+
 table td { padding: 7px 0; border-bottom: 1px solid var(--border); }
 table tr:last-child td { border-bottom: none; }
 td.label { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
