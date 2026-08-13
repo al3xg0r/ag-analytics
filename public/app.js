@@ -6,6 +6,7 @@ const API = ""; // same-origin: the Worker serves both the API and this file
 const TOKEN_KEY = "ag_admin_token";
 const THEME_KEY = "ag_theme";
 const PANELS_KEY = "ag_visible_panels";
+const PANEL_ORDER_KEY = "ag_panel_order";
 const ALL_PANELS = ["pages", "referrers", "search-engines", "campaigns", "countries", "browsers", "os", "devices", "events"];
 
 let state = {
@@ -84,6 +85,8 @@ async function boot() {
   try {
     await loadSites();
     showView("app");
+    applyPanelOrder();
+    initPanelDragAndDrop();
     applyVisiblePanels();
     await refreshAll();
   } catch (e) {
@@ -329,6 +332,70 @@ function applyVisiblePanels() {
   });
   document.querySelectorAll('#form-customize input[name="panel"]').forEach((checkbox) => {
     checkbox.checked = visible.includes(checkbox.value);
+  });
+}
+
+// ---------- drag-and-drop reordering of breakdown panels ----------
+
+// Reads the saved panel order from this browser. Falls back to ALL_PANELS
+// (and is validated against it) so a future added/removed panel, or a
+// leftover order from an older version, never leaves a panel un-rendered.
+function getPanelOrder() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PANEL_ORDER_KEY));
+    if (Array.isArray(stored) && ALL_PANELS.every((p) => stored.includes(p)) && stored.length === ALL_PANELS.length) {
+      return stored;
+    }
+  } catch {
+    // fall through to default
+  }
+  return [...ALL_PANELS];
+}
+
+// Re-orders the actual .panel elements in the DOM to match the saved order.
+// appendChild on an element already in the DOM moves it rather than cloning
+// it, so this is enough to reorder without touching any panel's content.
+function applyPanelOrder() {
+  const grid = document.getElementById("breakdown-grid");
+  const panels = Array.from(grid.querySelectorAll(".panel"));
+  const byKey = Object.fromEntries(panels.map((p) => [p.dataset.panel, p]));
+  getPanelOrder().forEach((key) => {
+    if (byKey[key]) grid.appendChild(byKey[key]);
+  });
+}
+
+let dragSource = null;
+
+function initPanelDragAndDrop() {
+  const grid = document.getElementById("breakdown-grid");
+
+  grid.querySelectorAll(".panel").forEach((panel) => {
+    panel.addEventListener("dragstart", () => {
+      dragSource = panel;
+      panel.classList.add("dragging");
+    });
+
+    panel.addEventListener("dragend", () => {
+      panel.classList.remove("dragging");
+      dragSource = null;
+      grid.querySelectorAll(".panel").forEach((p) => p.classList.remove("drag-over"));
+      // Persist whatever order the panels ended up in.
+      const order = Array.from(grid.querySelectorAll(".panel")).map((p) => p.dataset.panel);
+      localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(order));
+    });
+
+    panel.addEventListener("dragover", (e) => {
+      e.preventDefault(); // required to allow dropping
+      if (!dragSource || dragSource === panel) return;
+      panel.classList.add("drag-over");
+      const rect = panel.getBoundingClientRect();
+      const before = e.clientX < rect.left + rect.width / 2;
+      grid.insertBefore(dragSource, before ? panel : panel.nextSibling);
+    });
+
+    panel.addEventListener("dragleave", () => panel.classList.remove("drag-over"));
+
+    panel.addEventListener("drop", (e) => e.preventDefault());
   });
 }
 

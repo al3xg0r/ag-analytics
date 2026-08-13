@@ -362,13 +362,23 @@ form > button[type="submit"] {
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   padding: 18px;
+  transition: opacity 0.15s, border-color 0.15s;
 }
 
 .panel-title {
   font-family: var(--font-display);
   font-size: 14px;
   margin-bottom: 12px;
+  cursor: grab;
+  /* small drag-handle hint so it's clear the whole card can be picked up */
+  user-select: none;
 }
+
+.panel-title:active { cursor: grabbing; }
+
+.panel.dragging { opacity: 0.4; }
+
+.panel.drag-over { border-color: var(--accent); }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 table td { padding: 7px 0; border-bottom: 1px solid var(--border); }

@@ -274,9 +274,9 @@ from `/auth/login`, sent as an `Authorization: Bearer <token>` header.
 backward compatibility — new deployments and the current `widget.js` use `/event`/`/ping`.
 
 Likewise, the script file itself was renamed from `tracker.js` to `widget.js` (same reasoning:
-avoiding ad-blocker filter-list patterns). `/tracker.js` is still served — internally aliased to
-`/widget.js` — so any site with an already-embedded old snippet keeps working without changes.
-New sites get a `/widget.js` snippet from the **Code**/**+ Add site** buttons.
+avoiding ad-blocker filter-list patterns). The `/tracker.js` alias has since been removed —
+all snippets (from the **Code**/**+ Add site** buttons, and any already-deployed sites) use
+`/widget.js` directly.
 
 Every `GET` endpoint above (except `/sites` and `/online`) accepts `site_id` and `period` query
 parameters, where `period` is one of `today`, `yesterday`, `7d`, `30d`, `12m`, `all`.
