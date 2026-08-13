@@ -166,6 +166,20 @@ document.getElementById("btn-theme").addEventListener("click", () => {
 
 // ---------- sites ----------
 
+// Shows the site's favicon next to its name in the header, fetched via
+// Google's favicon service so we never have to store or proxy the image
+// ourselves (and it still works for sites without a /favicon.ico).
+function updateSiteFavicon(site) {
+  const img = document.getElementById("site-favicon");
+  if (!site) {
+    img.classList.add("hidden");
+    return;
+  }
+  const cleanDomain = site.domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "");
+  img.src = `https://www.google.com/s2/favicons?domain=${cleanDomain}&sz=64`;
+  img.classList.remove("hidden");
+}
+
 async function loadSites() {
   const { sites } = await api("/sites");
   state.sites = sites;
@@ -177,7 +191,8 @@ async function loadSites() {
 
   if (sites.length === 0) {
     state.currentSiteId = null;
-    document.getElementById("site-name").textContent = "No sites yet";
+    document.getElementById("site-name-text").textContent = "No sites yet";
+    updateSiteFavicon(null);
     deleteButton.disabled = true;
     codeButton.disabled = true;
     setContentVisible(false);
@@ -193,7 +208,8 @@ async function loadSites() {
   state.currentSiteId = stillExists ? state.currentSiteId : sites[0].id;
   select.value = state.currentSiteId;
   const current = sites.find((s) => s.id === state.currentSiteId);
-  document.getElementById("site-name").textContent = current ? current.name : "—";
+  document.getElementById("site-name-text").textContent = current ? current.name : "—";
+  updateSiteFavicon(current);
 }
 
 // Hides the stat cards / chart / breakdown tables when there is nothing to show yet
@@ -206,7 +222,8 @@ function setContentVisible(visible) {
 document.getElementById("site-select").addEventListener("change", async (e) => {
   state.currentSiteId = e.target.value;
   const site = state.sites.find((s) => s.id === state.currentSiteId);
-  document.getElementById("site-name").textContent = site ? site.name : "—";
+  document.getElementById("site-name-text").textContent = site ? site.name : "—";
+  updateSiteFavicon(site);
   await refreshAll();
 });
 

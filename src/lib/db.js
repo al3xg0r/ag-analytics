@@ -31,6 +31,10 @@ export async function insertSite(db, site) {
 export async function deleteSite(db, siteId) {
   await db.prepare("DELETE FROM visits WHERE site_id = ?").bind(siteId).run();
   await db.prepare("DELETE FROM sessions WHERE site_id = ?").bind(siteId).run();
+  // Custom events (agEvent(...) calls) live in their own table and were
+  // previously left behind when a site was deleted — orphaned rows with no
+  // matching site. Cleared here too so a deleted site really is fully gone.
+  await db.prepare("DELETE FROM events WHERE site_id = ?").bind(siteId).run();
   await db.prepare("DELETE FROM sites WHERE id = ?").bind(siteId).run();
 }
 

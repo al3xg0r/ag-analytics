@@ -139,15 +139,5 @@ async function route(request, env) {
   if (siteMatch && request.method === "PATCH") return handleUpdateSite(request, env, siteMatch[1]);
 
   // Anything else falls back to the static dashboard files (HTML/CSS/JS).
-  // "/tracker.js" (the old public script name) is kept working as an alias
-  // for "/widget.js" — the file itself was renamed because "tracker.js" is
-  // a very common ad-blocker filter-list pattern, same reasoning as
-  // "/event"/"/ping" above. Any already-embedded <script src=".../tracker.js">
-  // on a live site keeps working; new snippets use "/widget.js".
-  if (pathname === "/tracker.js") {
-    const assetUrl = new URL(request.url);
-    assetUrl.pathname = "/widget.js";
-    return env.ASSETS.fetch(new Request(assetUrl, request));
-  }
   return env.ASSETS.fetch(request);
 }

@@ -249,7 +249,8 @@ form > button[type="submit"] {
   flex-wrap: wrap;
 }
 
-#site-name { font-size: 26px; }
+#site-name { font-size: 26px; display: flex; align-items: center; gap: 10px; }
+.site-favicon { width: 22px; height: 22px; border-radius: 4px; flex-shrink: 0; }
 
 .header-actions {
   display: flex;
