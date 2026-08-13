@@ -1,4 +1,4 @@
-import { getSiteById, insertVisit, upsertSession } from "../lib/db.js";
+import { getSiteById, insertVisit, insertEvent, upsertSession } from "../lib/db.js";
 import { parseBrowser, parseOS, parseDeviceType, isBot } from "../lib/ua-parser.js";
 import { parseReferrer, extractUtm, normalizePagePath } from "../lib/utm.js";
 import { buildVisitorHash } from "../lib/visitor.js";
@@ -39,10 +39,32 @@ export async function handleCollect(request, env) {
   const sessionId = body.sessionId || `${visitorHash}-${new Date().toISOString().slice(0, 10)}`;
 
   let currentHost = null;
+  let currentProtocol = null;
   try {
-    currentHost = new URL(url).hostname;
+    const parsedUrl = new URL(url);
+    currentHost = parsedUrl.hostname;
+    currentProtocol = parsedUrl.protocol;
   } catch {
-    // keep null if url is not a valid absolute URL
+    // keep both null if url is not a valid absolute URL
+  }
+
+  // A real page view always comes from an http(s) page. Anything else —
+  // file:// (a locally saved/opened copy of the page, common with AV
+  // sandboxes and link-checker tools), chrome-extension://, etc. — is not a
+  // genuine visit to the site. Recorded as a distinct custom event instead
+  // of a normal visit, so it never pollutes pageview/visitor/bounce-rate
+  // numbers, but is still visible (in the Custom events panel) rather than
+  // silently discarded.
+  if (currentProtocol !== "http:" && currentProtocol !== "https:") {
+    await insertEvent(env.DB, {
+      siteId: site,
+      sessionId: body.sessionId || null,
+      visitorHash,
+      name: "non_web_request",
+      url: url.slice(0, 500),
+      props: JSON.stringify({ scheme: currentProtocol || "unknown" }),
+    });
+    return json({ ok: true }, 200);
   }
 
   const referrerInfo = parseReferrer(referrer, currentHost);
