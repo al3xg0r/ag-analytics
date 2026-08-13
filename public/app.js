@@ -668,15 +668,22 @@ function renderTable(tableId, items, options = {}) {
 }
 
 // Converts a 2-letter ISO country code (as returned by Cloudflare, e.g. "US")
-// into its flag emoji, purely client-side. Falls back to the code itself for
-// anything that isn't a real 2-letter code ("Unknown", etc).
+// into its flag emoji, purely client-side. Cloudflare also sends two special
+// pseudo-codes instead of a real country: "T1" for Tor traffic (no real
+// geolocation is possible for Tor exit nodes) and "XX" when it couldn't
+// determine a location at all — both get their own icon here. Falls back to
+// nothing for anything else that isn't a real 2-letter code.
 function countryFlag(code) {
+  if (code === "T1") return "🧅"; // Tor
+  if (code === "XX") return "🌐"; // unknown
   if (!/^[A-Z]{2}$/i.test(code)) return "";
   const base = 127397; // regional indicator symbol offset
   return String.fromCodePoint(...code.toUpperCase().split("").map((c) => c.charCodeAt(0) + base));
 }
 
 function countryName(code) {
+  if (code === "T1") return "Tor network";
+  if (code === "XX") return "Unknown";
   try {
     return new Intl.DisplayNames([navigator.language || "en"], { type: "region" }).of(code.toUpperCase());
   } catch {
