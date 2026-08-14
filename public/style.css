@@ -390,6 +390,14 @@ form > button[type="submit"] {
 
 .chart-tooltip strong { font-family: var(--font-display); font-size: 12px; }
 
+.tooltip-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  margin-right: 4px;
+}
+
 .breakdown-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -680,7 +680,7 @@ function drawChart(buckets) {
 
       // Tooltip always shows both numbers, even if one series is currently
       // hidden from the chart — it's still useful context on hover.
-      tooltip.innerHTML = `<strong>${formatBucketLabel(b.bucket)}</strong><br>${b.views} views &middot; ${b.visitors} visitors`;
+      tooltip.innerHTML = `<strong>${formatBucketLabel(b.bucket)}</strong><br><span class="tooltip-dot" style="background:var(--accent)"></span>${b.views} views &middot; <span class="tooltip-dot" style="background:var(--accent-2)"></span>${b.visitors} visitors`;
       tooltip.style.left = `${(x / CHART_WIDTH) * 100}%`;
       tooltip.style.top = `${(yFor(b[activeSeries[0].key]) / CHART_HEIGHT) * 100}%`;
       tooltip.classList.remove("hidden");
