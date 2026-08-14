@@ -20,6 +20,8 @@
   --live: #16a672;
   --live-soft: #dcf5ea;
   --negative: #e4572e;
+  --accent-2: #e8a33d;
+  --accent-2-soft: rgba(232, 163, 61, 0.16);
   --radius: 14px;
   --shadow-sm: 0 1px 2px rgba(23, 23, 31, 0.05);
   --shadow-lg: 0 16px 32px -20px rgba(23, 23, 31, 0.28);
@@ -40,6 +42,8 @@
   --accent-contrast: #0e0e14;
   --live: #34d399;
   --live-soft: rgba(52, 211, 153, 0.16);
+  --accent-2: #f5b95b;
+  --accent-2-soft: rgba(245, 185, 91, 0.18);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 20px 40px -20px rgba(0, 0, 0, 0.6);
 }
@@ -331,6 +335,42 @@ form > button[type="submit"] {
 }
 
 #chart { width: 100%; height: 240px; display: block; cursor: crosshair; }
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 2px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.legend-item:not(.active) {
+  opacity: 0.4;
+}
+
+.legend-item.active { color: var(--text); }
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.legend-views .legend-dot { background: var(--accent); }
+.legend-visitors .legend-dot { background: var(--accent-2); }
 
 .chart-tooltip {
   position: absolute;

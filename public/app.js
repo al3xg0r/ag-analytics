@@ -13,6 +13,8 @@ let state = {
   sites: [],
   currentSiteId: null,
   currentPeriod: "today",
+  chartBuckets: [],
+  visibleSeries: { views: true, visitors: true },
 };
 
 // ---------- small helpers ----------
@@ -485,8 +487,23 @@ async function loadOnline() {
 
 async function loadChart() {
   const data = await api(`/stats?site_id=${state.currentSiteId}&period=${state.currentPeriod}`);
-  drawChart(data.buckets);
+  state.chartBuckets = data.buckets;
+  drawChart(state.chartBuckets);
 }
+
+// Toggles which of the two series (views / visitors) are plotted. At least
+// one stays on at all times — turning off the last visible one is a no-op,
+// since an empty chart isn't a useful state to be in.
+document.getElementById("chart-legend").addEventListener("click", (e) => {
+  const button = e.target.closest(".legend-item");
+  if (!button) return;
+  const series = button.dataset.series;
+  const otherSeries = series === "views" ? "visitors" : "views";
+  if (state.visibleSeries[series] && !state.visibleSeries[otherSeries]) return;
+  state.visibleSeries[series] = !state.visibleSeries[series];
+  button.classList.toggle("active", state.visibleSeries[series]);
+  drawChart(state.chartBuckets);
+});
 
 // Formats a bucket's ISO timestamp for the tooltip/axis, adapting to whether
 // buckets are hourly (Today/Yesterday) or daily (everything else).
@@ -525,18 +542,25 @@ function drawChart(buckets) {
     return;
   }
 
+  // Series shown as separate lines, each with its own color — kept distinct
+  // rather than stacked/combined so it's always clear at a glance whether a
+  // peak in the chart is a peak in page views or in unique visitors; those
+  // don't necessarily land on the same bucket (e.g. one visitor loading many
+  // pages spikes views without spiking visitors).
+  const SERIES = [
+    { key: "views", color: "var(--accent)", label: "views" },
+    { key: "visitors", color: "var(--accent-2)", label: "visitors" },
+  ];
+  const activeSeries = SERIES.filter((s) => state.visibleSeries[s.key]);
+
   const innerTop = CHART_PADDING_TOP;
   const innerBottom = CHART_HEIGHT - CHART_PADDING_BOTTOM;
   const innerHeight = innerBottom - innerTop;
-  const max = Math.max(...buckets.map((b) => b.views), 1);
+  const max = Math.max(...buckets.flatMap((b) => activeSeries.map((s) => b[s.key])), 1);
 
   const stepX = (CHART_WIDTH - CHART_PADDING_X * 2) / Math.max(buckets.length - 1, 1);
   const xFor = (i) => CHART_PADDING_X + i * stepX;
-  const yFor = (views) => innerBottom - (views / max) * innerHeight;
-
-  const points = buckets.map((b, i) => `${xFor(i)},${yFor(b.views)}`);
-  const linePath = `M ${points.join(" L ")}`;
-  const areaPath = `${linePath} L ${xFor(buckets.length - 1)},${innerBottom} L ${xFor(0)},${innerBottom} Z`;
+  const yFor = (value) => innerBottom - (value / max) * innerHeight;
 
   const ns = "http://www.w3.org/2000/svg";
   const svgEl = (tag, attrs) => {
@@ -545,8 +569,9 @@ function drawChart(buckets) {
     return el;
   };
 
-  // Horizontal gridlines with a view-count scale on the left, so the chart
-  // reads as actual numbers instead of just a vague shape.
+  // Horizontal gridlines with a scale on the left, so the chart reads as
+  // actual numbers instead of just a vague shape. Scaled to whichever
+  // series are currently visible.
   const gridSteps = 4;
   for (let i = 0; i <= gridSteps; i++) {
     const y = innerTop + (innerHeight / gridSteps) * i;
@@ -589,13 +614,34 @@ function drawChart(buckets) {
     svg.appendChild(text);
   });
 
-  const area = svgEl("path", { d: areaPath, fill: "var(--accent)", opacity: "0.18" });
-  svg.appendChild(area);
+  // Area fill only makes sense with a single series on screen — with both
+  // visible, two overlapping fills just muddy the chart, so lines alone
+  // carry it in that case.
+  const guideDots = {};
+  activeSeries.forEach((series) => {
+    const points = buckets.map((b, i) => `${xFor(i)},${yFor(b[series.key])}`);
+    const linePath = `M ${points.join(" L ")}`;
 
-  const line = svgEl("path", { d: linePath, fill: "none", stroke: "var(--accent)", "stroke-width": "2" });
-  svg.appendChild(line);
+    if (activeSeries.length === 1) {
+      const areaPath = `${linePath} L ${xFor(buckets.length - 1)},${innerBottom} L ${xFor(0)},${innerBottom} Z`;
+      svg.appendChild(svgEl("path", { d: areaPath, fill: series.color, opacity: "0.18" }));
+    }
 
-  // Invisible guide elements, moved into place on hover
+    svg.appendChild(svgEl("path", { d: linePath, fill: "none", stroke: series.color, "stroke-width": "2" }));
+
+    guideDots[series.key] = svgEl("circle", {
+      cx: 0,
+      cy: 0,
+      r: 4,
+      fill: series.color,
+      stroke: "var(--surface)",
+      "stroke-width": "2",
+      opacity: "0",
+    });
+    svg.appendChild(guideDots[series.key]);
+  });
+
+  // Invisible vertical guide line, moved into place on hover
   const guideLine = svgEl("line", {
     x1: 0,
     x2: 0,
@@ -607,9 +653,6 @@ function drawChart(buckets) {
     opacity: "0",
   });
   svg.appendChild(guideLine);
-
-  const guideDot = svgEl("circle", { cx: 0, cy: 0, r: 4, fill: "var(--accent)", stroke: "var(--surface)", "stroke-width": "2", opacity: "0" });
-  svg.appendChild(guideDot);
 
   // A transparent full-height rect per bucket makes hit-testing trivial: no
   // need to compute distances, just which column the cursor is over.
@@ -624,17 +667,22 @@ function drawChart(buckets) {
     });
     hitRect.addEventListener("mouseenter", () => {
       const x = xFor(i);
-      const y = yFor(b.views);
       guideLine.setAttribute("x1", x);
       guideLine.setAttribute("x2", x);
       guideLine.setAttribute("opacity", "1");
-      guideDot.setAttribute("cx", x);
-      guideDot.setAttribute("cy", y);
-      guideDot.setAttribute("opacity", "1");
 
+      activeSeries.forEach((series) => {
+        const dot = guideDots[series.key];
+        dot.setAttribute("cx", x);
+        dot.setAttribute("cy", yFor(b[series.key]));
+        dot.setAttribute("opacity", "1");
+      });
+
+      // Tooltip always shows both numbers, even if one series is currently
+      // hidden from the chart — it's still useful context on hover.
       tooltip.innerHTML = `<strong>${formatBucketLabel(b.bucket)}</strong><br>${b.views} views &middot; ${b.visitors} visitors`;
       tooltip.style.left = `${(x / CHART_WIDTH) * 100}%`;
-      tooltip.style.top = `${(y / CHART_HEIGHT) * 100}%`;
+      tooltip.style.top = `${(yFor(b[activeSeries[0].key]) / CHART_HEIGHT) * 100}%`;
       tooltip.classList.remove("hidden");
     });
     svg.appendChild(hitRect);
@@ -642,7 +690,7 @@ function drawChart(buckets) {
 
   svg.addEventListener("mouseleave", () => {
     guideLine.setAttribute("opacity", "0");
-    guideDot.setAttribute("opacity", "0");
+    activeSeries.forEach((series) => guideDots[series.key].setAttribute("opacity", "0"));
     tooltip.classList.add("hidden");
   });
 }
