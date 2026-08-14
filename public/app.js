@@ -7,11 +7,12 @@ const TOKEN_KEY = "ag_admin_token";
 const THEME_KEY = "ag_theme";
 const PANELS_KEY = "ag_visible_panels";
 const PANEL_ORDER_KEY = "ag_panel_order";
+const CURRENT_SITE_KEY = "ag_current_site";
 const ALL_PANELS = ["pages", "referrers", "search-engines", "campaigns", "countries", "browsers", "os", "devices", "events"];
 
 let state = {
   sites: [],
-  currentSiteId: null,
+  currentSiteId: localStorage.getItem(CURRENT_SITE_KEY) || null,
   currentPeriod: "today",
   chartBuckets: [],
   visibleSeries: { views: true, visitors: true },
@@ -196,6 +197,7 @@ async function loadSites() {
 
   if (sites.length === 0) {
     state.currentSiteId = null;
+    localStorage.removeItem(CURRENT_SITE_KEY);
     document.getElementById("site-name-text").textContent = "No sites yet";
     updateSiteFavicon(null);
     deleteButton.disabled = true;
@@ -208,9 +210,12 @@ async function loadSites() {
   codeButton.disabled = false;
   setContentVisible(true);
 
-  // Keep the previously selected site if it still exists, otherwise fall back to the first one
+  // Keep the previously selected site if it still exists (whether from this
+  // session or restored from localStorage after a reload), otherwise fall
+  // back to the first one.
   const stillExists = state.currentSiteId && sites.some((s) => s.id === state.currentSiteId);
   state.currentSiteId = stillExists ? state.currentSiteId : sites[0].id;
+  localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   select.value = state.currentSiteId;
   const current = sites.find((s) => s.id === state.currentSiteId);
   document.getElementById("site-name-text").textContent = current ? current.name : "—";
@@ -226,6 +231,7 @@ function setContentVisible(visible) {
 
 document.getElementById("site-select").addEventListener("change", async (e) => {
   state.currentSiteId = e.target.value;
+  localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   const site = state.sites.find((s) => s.id === state.currentSiteId);
   document.getElementById("site-name-text").textContent = site ? site.name : "—";
   updateSiteFavicon(site);
