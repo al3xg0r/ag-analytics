@@ -35,5 +35,5 @@ APP_NAME = "AG Analytics"
 # a glance whether you're looking at a freshly deployed version or a stale
 # cached copy of the frontend. Bump both alongside the version in package.json
 # whenever you cut a release.
-APP_VERSION = "0.2.0-beta.1"
-APP_RELEASE_DATE = "2026-08-12"
+APP_VERSION = "0.3.0-beta.1"
+APP_RELEASE_DATE = "2026-08-19"
