@@ -8,7 +8,7 @@ const THEME_KEY = "ag_theme";
 const PANELS_KEY = "ag_visible_panels";
 const PANEL_ORDER_KEY = "ag_panel_order";
 const CURRENT_SITE_KEY = "ag_current_site";
-const ALL_PANELS = ["pages", "referrers", "search-engines", "campaigns", "countries", "browsers", "os", "devices", "events"];
+const ALL_PANELS = ["pages", "referrers", "search-engines", "search-queries", "campaigns", "countries", "browsers", "os", "devices", "events", "bots"];
 
 let state = {
   sites: [],
@@ -97,17 +97,15 @@ async function boot() {
   }
 }
 
-// Shows "vX.Y.Z-betaN · Aug 11, 2026" (or just the version, if no date is
-// configured) in the sidebar footer. Mainly useful for telling at a glance
-// whether the browser is showing a freshly deployed version or a stale
-// cached copy of the frontend after a deploy.
+// Shows "vX.Y.Z-betaN" in the sidebar footer as a link straight to that
+// release on GitHub — both a quick way to tell what's actually deployed
+// (vs. a stale cached copy of the frontend) and a one-click path to the
+// changelog for that version.
 function renderVersionTag(status) {
   const el = document.getElementById("app-version");
   if (!el || !status?.version) return;
-  const date = status.release_date
-    ? new Date(status.release_date).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
-    : null;
-  el.textContent = date ? `v${status.version} · ${date}` : `v${status.version}`;
+  el.textContent = `v${status.version}`;
+  el.href = `https://github.com/al3xg0r/ag-analytics/releases/tag/v${status.version}`;
 }
 
 // ---------- auth forms ----------
@@ -229,13 +227,39 @@ function setContentVisible(visible) {
   document.querySelector(".breakdown-grid").classList.toggle("hidden", !visible);
 }
 
+// ---------- mobile menu ----------
+
+function openMobileMenu() {
+  document.getElementById("sidebar").classList.add("open");
+  document.getElementById("sidebar-overlay").classList.remove("hidden");
+}
+
+function closeMobileMenu() {
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar-overlay").classList.add("hidden");
+}
+
+document.getElementById("btn-mobile-menu").addEventListener("click", openMobileMenu);
+document.getElementById("sidebar-overlay").addEventListener("click", closeMobileMenu);
+
 document.getElementById("site-select").addEventListener("change", async (e) => {
   state.currentSiteId = e.target.value;
   localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   const site = state.sites.find((s) => s.id === state.currentSiteId);
   document.getElementById("site-name-text").textContent = site ? site.name : "—";
   updateSiteFavicon(site);
+  closeMobileMenu();
   await refreshAll();
+});
+
+document.getElementById("btn-refresh").addEventListener("click", async () => {
+  const button = document.getElementById("btn-refresh");
+  button.classList.add("spinning");
+  try {
+    await refreshAll();
+  } finally {
+    button.classList.remove("spinning");
+  }
 });
 
 document.getElementById("btn-add-site").addEventListener("click", () => {
@@ -433,6 +457,7 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
   document.querySelectorAll("#period-tabs button").forEach((b) => b.classList.remove("active"));
   button.classList.add("active");
   state.currentPeriod = button.dataset.period;
+  closeMobileMenu();
   await refreshAll();
 });
 
@@ -747,7 +772,7 @@ function countryName(code) {
 
 async function loadBreakdowns() {
   const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=25`;
-  const [pages, referrers, searchEngines, countries, browsers, os, devices, campaigns, events] = await Promise.all([
+  const [pages, referrers, searchEngines, countries, browsers, os, devices, campaigns, events, bots, searchQueries] = await Promise.all([
     api(`/pages?${q}`),
     api(`/referrers?${q}`),
     api(`/search-engines?${q}`),
@@ -757,6 +782,8 @@ async function loadBreakdowns() {
     api(`/devices?${q}&dimension=device_type`),
     api(`/campaigns?${q}`),
     api(`/events?${q}`),
+    api(`/bots?${q}`),
+    api(`/search-queries?${q}`),
   ]);
 
   const currentSite = state.sites.find((s) => s.id === state.currentSiteId);
@@ -787,6 +814,8 @@ async function loadBreakdowns() {
   renderTable("table-devices", devices.items);
   renderTable("table-campaigns", campaigns.items);
   renderTable("table-events", events.items);
+  renderTable("table-bots", bots.items);
+  renderTable("table-search-queries", searchQueries.items);
 }
 
 // Refresh only the "online now" number regularly. Everything else only

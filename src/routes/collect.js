@@ -1,5 +1,5 @@
 import { getSiteById, insertVisit, insertEvent, upsertSession } from "../lib/db.js";
-import { parseBrowser, parseOS, parseDeviceType, isBot } from "../lib/ua-parser.js";
+import { parseBrowser, parseOS, parseDeviceType, isBot, botLabel } from "../lib/ua-parser.js";
 import { parseReferrer, extractUtm, normalizePagePath } from "../lib/utm.js";
 import { buildVisitorHash } from "../lib/visitor.js";
 import { json, noContent } from "../lib/response.js";
@@ -24,18 +24,27 @@ export async function handleCollect(request, env) {
   }
 
   const userAgent = request.headers.get("User-Agent") || "";
+  const country = request.cf?.country || "Unknown";
+  const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
+  const visitorHash = await buildVisitorHash({ ip, userAgent, siteId: site });
 
   // Known crawlers, uptime monitors, and scripted HTTP clients never count as
-  // a "visitor" — accept-and-drop, same as the disabled-site case above, so a
-  // bot gets no signal either way about whether it was detected.
+  // a "visitor" — they don't touch visits/sessions (so pageview/visitor
+  // counts stay clean), but they ARE recorded as a distinct event so they're
+  // still visible somewhere (the Bots panel) instead of vanishing without a
+  // trace.
   if (isBot(userAgent)) {
+    await insertEvent(env.DB, {
+      siteId: site,
+      sessionId: null,
+      visitorHash,
+      name: "bot_blocked",
+      url: url.slice(0, 500),
+      props: JSON.stringify({ bot: botLabel(userAgent) }),
+    });
     return noContent();
   }
 
-  const country = request.cf?.country || "Unknown";
-  const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
-
-  const visitorHash = await buildVisitorHash({ ip, userAgent, siteId: site });
   const sessionId = body.sessionId || `${visitorHash}-${new Date().toISOString().slice(0, 10)}`;
 
   let currentHost = null;

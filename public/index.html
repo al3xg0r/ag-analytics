@@ -45,7 +45,14 @@
 
   <!-- Main dashboard -->
   <div id="view-app" class="app hidden">
-    <aside class="sidebar">
+    <div class="mobile-topbar">
+      <button type="button" id="btn-mobile-menu" class="btn-hamburger" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
+    </div>
+    <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
 
       <div class="sidebar-section">
@@ -74,13 +81,21 @@
       <div class="sidebar-footer">
         <button id="btn-theme" class="btn-ghost small">Toggle theme</button>
         <button id="btn-logout" class="btn-ghost small">Log out</button>
-        <div id="app-version" class="version-tag"></div>
+        <a id="app-version" class="version-tag" href="https://github.com/al3xg0r/ag-analytics" target="_blank" rel="noopener noreferrer"></a>
       </div>
     </aside>
 
     <main class="content">
       <header class="content-header">
-        <h1 id="site-name"><img id="site-favicon" class="site-favicon hidden" alt="" /><span id="site-name-text">—</span></h1>
+        <h1 id="site-name">
+          <img id="site-favicon" class="site-favicon hidden" alt="" /><span id="site-name-text">—</span>
+          <button type="button" id="btn-refresh" class="btn-refresh" title="Refresh data">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <polyline points="21 3 21 9 15 9" />
+            </svg>
+          </button>
+        </h1>
         <div class="header-actions">
           <div class="online-indicator">
             <span class="pulse-dot"></span>
@@ -162,6 +177,15 @@
           <div class="panel-title">Custom events</div>
           <div class="panel-scroll"><table id="table-events"><tbody></tbody></table></div>
         </div>
+        <div class="panel" data-panel="search-queries" draggable="true">
+          <div class="panel-title">Search queries</div>
+          <p class="panel-note">Google withholds the query for most organic clicks — this fills in mainly from Bing, DuckDuckGo &amp; co.</p>
+          <div class="panel-scroll"><table id="table-search-queries"><tbody></tbody></table></div>
+        </div>
+        <div class="panel" data-panel="bots" draggable="true">
+          <div class="panel-title">Bots &amp; crawlers</div>
+          <div class="panel-scroll"><table id="table-bots"><tbody></tbody></table></div>
+        </div>
       </section>
     </main>
   </div>
@@ -182,7 +206,7 @@
       <div id="new-site-result" class="hidden">
         <p>Site created. Paste this snippet before <code>&lt;/body&gt;</code>:</p>
         <pre id="new-site-snippet"></pre>
-        <button id="btn-close-new-site">Done</button>
+        <button id="btn-close-new-site" class="btn-primary">Done</button>
       </div>
     </div>
   </div>
@@ -195,7 +219,7 @@
       <pre id="view-code-snippet"></pre>
       <div class="modal-actions">
         <button type="button" id="btn-copy-code" class="btn-ghost">Copy</button>
-        <button type="button" id="btn-close-view-code">Done</button>
+        <button type="button" id="btn-close-view-code" class="btn-primary">Done</button>
       </div>
     </div>
   </div>
@@ -215,8 +239,10 @@
         <label class="checkbox-row"><input type="checkbox" name="panel" value="os" checked /> Operating systems</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="devices" checked /> Devices</label>
         <label class="checkbox-row"><input type="checkbox" name="panel" value="events" checked /> Custom events</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="bots" checked /> Bots &amp; crawlers</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="search-queries" checked /> Search queries</label>
         <div class="modal-actions">
-          <button type="button" id="btn-close-customize">Done</button>
+          <button type="button" id="btn-close-customize" class="btn-primary">Done</button>
         </div>
       </form>
     </div>

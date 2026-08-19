@@ -2,26 +2,29 @@ import { getPeriodRange } from "../lib/db.js";
 import { cacheGet, cacheSet } from "../lib/kv.js";
 import { json, error } from "../lib/response.js";
 
-// Same shape as the breakdown endpoints in lib/aggregate.js ({label, views,
-// visitors}), but querying the separate `events` table instead of `visits` —
-// custom events aren't page views, so they don't belong in that table.
-export async function handleEvents(request, env) {
+// Same {label, views} shape as the other breakdown endpoints, but querying
+// the `events` table for the "bot_blocked" events written by collect.js
+// (see there for why: bots never touch visits/sessions, so they don't skew
+// pageview/visitor counts, but they're still recorded here for visibility).
+// json_extract pulls the friendly bot name back out of the JSON `props`
+// column rather than adding a dedicated column just for this.
+export async function handleBots(request, env) {
   const url = new URL(request.url);
   const siteId = url.searchParams.get("site_id");
   const period = url.searchParams.get("period") || "7d";
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10), 100);
   if (!siteId) return error("site_id is required");
 
-  const cacheKey = `events:${siteId}:${period}:${limit}`;
+  const cacheKey = `bots:${siteId}:${period}:${limit}`;
   const cached = await cacheGet(env.AGANALITICS_CACHE, cacheKey);
   if (cached) return json(cached);
 
   const { start, end } = getPeriodRange(period);
 
   const { results } = await env.DB.prepare(
-    `SELECT name as label, COUNT(*) as views, COUNT(DISTINCT visitor_hash) as visitors
+    `SELECT json_extract(props, '$.bot') as label, COUNT(*) as views
      FROM events
-     WHERE site_id = ? AND created_at BETWEEN ? AND ? AND name != 'bot_blocked'
+     WHERE site_id = ? AND name = 'bot_blocked' AND created_at BETWEEN ? AND ?
      GROUP BY label
      ORDER BY views DESC
      LIMIT ?`

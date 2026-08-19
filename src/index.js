@@ -10,8 +10,10 @@ import { handleReferrers } from "./routes/referrers.js";
 import { handleDevices } from "./routes/devices.js";
 import { handleBrowsers } from "./routes/browsers.js";
 import { handleSearchEngines } from "./routes/search-engines.js";
+import { handleSearchQueries } from "./routes/search-queries.js";
 import { handleCampaigns } from "./routes/campaigns.js";
 import { handleEvents } from "./routes/events.js";
+import { handleBots } from "./routes/bots.js";
 import { handleSetup, handleAuthStatus, handleLogin } from "./routes/auth.js";
 import {
   handleListSites,
@@ -34,8 +36,10 @@ const PROTECTED_PREFIXES = [
   "/countries",
   "/referrers",
   "/search-engines",
+  "/search-queries",
   "/campaigns",
   "/events",
+  "/bots",
   "/devices",
   "/browsers",
   "/sites",
@@ -126,8 +130,10 @@ async function route(request, env) {
   if (pathname === "/countries" && request.method === "GET") return handleCountries(request, env);
   if (pathname === "/referrers" && request.method === "GET") return handleReferrers(request, env);
   if (pathname === "/search-engines" && request.method === "GET") return handleSearchEngines(request, env);
+  if (pathname === "/search-queries" && request.method === "GET") return handleSearchQueries(request, env);
   if (pathname === "/campaigns" && request.method === "GET") return handleCampaigns(request, env);
   if (pathname === "/events" && request.method === "GET") return handleEvents(request, env);
+  if (pathname === "/bots" && request.method === "GET") return handleBots(request, env);
   if (pathname === "/devices" && request.method === "GET") return handleDevices(request, env);
   if (pathname === "/browsers" && request.method === "GET") return handleBrowsers(request, env);
 

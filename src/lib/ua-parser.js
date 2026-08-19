@@ -43,3 +43,48 @@ export function isBot(ua) {
   if (!ua) return true; // no User-Agent at all is almost always a script, not a browser
   return BOT_PATTERN.test(ua);
 }
+
+// A friendly label for the bot stats panel — checked in roughly "most
+// specific first" order so e.g. "Googlebot" wins over the generic "bot"
+// match. Falls back to "Other bot" for anything the pattern above caught
+// but that isn't one of these named ones (generic scripts, unlisted crawlers).
+const BOT_LABELS = [
+  [/googlebot/i, "Googlebot"],
+  [/bingpreview|bingbot/i, "Bing"],
+  [/yandexbot/i, "YandexBot"],
+  [/baiduspider/i, "Baidu"],
+  [/duckduckbot/i, "DuckDuckBot"],
+  [/applebot/i, "Applebot"],
+  [/petalbot/i, "PetalBot"],
+  [/bytespider/i, "Bytespider"],
+  [/ahrefsbot/i, "AhrefsBot"],
+  [/semrushbot/i, "SemrushBot"],
+  [/mj12bot/i, "MJ12bot"],
+  [/dotbot/i, "DotBot"],
+  [/facebookexternalhit/i, "Facebook"],
+  [/whatsapp/i, "WhatsApp"],
+  [/telegrambot/i, "Telegram"],
+  [/discordbot/i, "Discord"],
+  [/slackbot/i, "Slack"],
+  [/embedly/i, "Embedly"],
+  [/quora link preview/i, "Quora"],
+  [/pingdom/i, "Pingdom"],
+  [/uptimerobot/i, "UptimeRobot"],
+  [/headlesschrome|phantomjs|puppeteer|playwright/i, "Headless browser"],
+  [/python-requests|python-urllib/i, "Python script"],
+  [/curl/i, "curl"],
+  [/wget/i, "Wget"],
+  [/go-http-client/i, "Go script"],
+  [/libwww-perl/i, "Perl script"],
+  [/scrapy/i, "Scrapy"],
+  [/monitor/i, "Monitoring service"],
+  [/spider|crawl|slurp|mediapartners/i, "Other crawler"],
+];
+
+export function botLabel(ua) {
+  if (!ua) return "Unknown (no UA)";
+  for (const [pattern, label] of BOT_LABELS) {
+    if (pattern.test(ua)) return label;
+  }
+  return "Other bot";
+}
