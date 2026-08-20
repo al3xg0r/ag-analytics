@@ -192,6 +192,7 @@ async function loadSites() {
 
   const deleteButton = document.getElementById("btn-delete-site");
   const codeButton = document.getElementById("btn-view-code");
+  const editDomainButton = document.getElementById("btn-edit-domain");
 
   if (sites.length === 0) {
     state.currentSiteId = null;
@@ -200,12 +201,14 @@ async function loadSites() {
     updateSiteFavicon(null);
     deleteButton.disabled = true;
     codeButton.disabled = true;
+    editDomainButton.disabled = true;
     setContentVisible(false);
     return;
   }
 
   deleteButton.disabled = false;
   codeButton.disabled = false;
+  editDomainButton.disabled = false;
   setContentVisible(true);
 
   // Keep the previously selected site if it still exists (whether from this
@@ -342,6 +345,41 @@ document.getElementById("btn-copy-code").addEventListener("click", async () => {
   } catch {
     // Clipboard API can be blocked (permissions, insecure context); the snippet
     // is still visible and selectable in the <pre> block as a fallback.
+  }
+});
+
+// ---------- edit site domain ----------
+
+document.getElementById("btn-edit-domain").addEventListener("click", () => {
+  if (!state.currentSiteId) return;
+  const site = state.sites.find((s) => s.id === state.currentSiteId);
+  const form = document.getElementById("form-edit-domain");
+  form.reset();
+  form.domain.value = site ? site.domain : "";
+  document.getElementById("edit-domain-error").textContent = "";
+  show("modal-edit-domain");
+});
+
+document.getElementById("btn-cancel-edit-domain").addEventListener("click", () => {
+  hide("modal-edit-domain");
+});
+
+document.getElementById("form-edit-domain").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!state.currentSiteId) return;
+  const form = new FormData(e.target);
+  const errorEl = document.getElementById("edit-domain-error");
+  errorEl.textContent = "";
+  try {
+    await api(`/sites/${state.currentSiteId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ domain: form.get("domain") }),
+    });
+    hide("modal-edit-domain");
+    await loadSites();
+    await refreshAll();
+  } catch (err) {
+    errorEl.textContent = err.message;
   }
 });
 

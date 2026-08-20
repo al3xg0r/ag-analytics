@@ -216,7 +216,7 @@ form > button[type="submit"] {
 
 .site-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 10px;
 }
@@ -460,14 +460,41 @@ form > button[type="submit"] {
 }
 
 .panel-title {
-  font-family: var(--font-display);
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 10px;
   margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
   cursor: grab;
   /* small drag-handle hint so it's clear the whole card can be picked up */
   user-select: none;
 }
 
+.panel-title::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.45;
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='9' cy='6' r='1.6'/%3E%3Ccircle cx='9' cy='12' r='1.6'/%3E%3Ccircle cx='9' cy='18' r='1.6'/%3E%3Ccircle cx='15' cy='6' r='1.6'/%3E%3Ccircle cx='15' cy='12' r='1.6'/%3E%3Ccircle cx='15' cy='18' r='1.6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='9' cy='6' r='1.6'/%3E%3Ccircle cx='9' cy='12' r='1.6'/%3E%3Ccircle cx='9' cy='18' r='1.6'/%3E%3Ccircle cx='15' cy='6' r='1.6'/%3E%3Ccircle cx='15' cy='12' r='1.6'/%3E%3Ccircle cx='15' cy='18' r='1.6'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  transition: opacity 0.15s;
+}
+
+.panel-title:hover { color: var(--text); }
+.panel-title:hover::before { opacity: 0.9; }
 .panel-title:active { cursor: grabbing; }
 
 .panel-note {
