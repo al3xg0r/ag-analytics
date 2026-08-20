@@ -440,12 +440,17 @@ function initPanelDragAndDrop() {
   const grid = document.getElementById("breakdown-grid");
 
   grid.querySelectorAll(".panel").forEach((panel) => {
-    panel.addEventListener("dragstart", () => {
+    // Only the title bar is draggable="true" (see the HTML) — dragstart/dragend
+    // only ever fire from there, so grabbing table text elsewhere in the card
+    // starts a normal text selection instead of a drag.
+    const handle = panel.querySelector(".panel-title");
+
+    handle.addEventListener("dragstart", () => {
       dragSource = panel;
       panel.classList.add("dragging");
     });
 
-    panel.addEventListener("dragend", () => {
+    handle.addEventListener("dragend", () => {
       panel.classList.remove("dragging");
       dragSource = null;
       grid.querySelectorAll(".panel").forEach((p) => p.classList.remove("drag-over"));
@@ -454,6 +459,8 @@ function initPanelDragAndDrop() {
       localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(order));
     });
 
+    // Dropping is still allowed anywhere on the card, not just on its title —
+    // only the pick-up point is restricted, not the drop target.
     panel.addEventListener("dragover", (e) => {
       e.preventDefault(); // required to allow dropping
       if (!dragSource || dragSource === panel) return;
