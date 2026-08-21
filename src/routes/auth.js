@@ -40,7 +40,6 @@ export async function handleAuthStatus(request, env) {
   return json({
     setup_required: !existing,
     version: env.APP_VERSION || null,
-    release_date: env.APP_RELEASE_DATE || null,
   });
 }
 

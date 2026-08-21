@@ -211,12 +211,12 @@ That's it. No terminal, no SQL, no Docker, no VPS from this point on.
   filter ever is — but it covers the traffic that actually shows up on most sites.
 - The **theme toggle** switches between the default light theme and a dark theme; your choice is
   remembered in the browser.
-- A small **`vX.Y.Z · date`** tag at the bottom of the sidebar shows which version is currently
-  deployed. Handy for confirming a deploy actually took effect, or for telling apart "the code
-  didn't deploy" from "my browser is showing a cached copy of the page" (hard-refresh with
-  Ctrl/Cmd+Shift+R if the tag looks stale after a deploy). Comes from `APP_VERSION` and
-  `APP_RELEASE_DATE` in `wrangler.toml` — bump both alongside `package.json`'s `version` whenever
-  you cut a release.
+- A small **`vX.Y.Z`** tag at the bottom of the sidebar, linking to that version's GitHub release,
+  shows which version is currently deployed. Handy for confirming a deploy actually took effect,
+  or for telling apart "the code didn't deploy" from "my browser is showing a cached copy of the
+  page" (hard-refresh with Ctrl/Cmd+Shift+R if the tag looks stale after a deploy). Comes from
+  `APP_VERSION` in `wrangler.toml` — bump it alongside `package.json`'s `version` whenever you cut
+  a release.
 
 ---
 

@@ -241,14 +241,19 @@ form > button[type="submit"] {
   gap: 8px;
 }
 
+.footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .version-tag {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
-  text-align: center;
-  margin-top: 4px;
   opacity: 0.7;
-  display: block;
   text-decoration: none;
   transition: opacity 0.15s, color 0.15s;
 }
@@ -257,6 +262,19 @@ form > button[type="submit"] {
   opacity: 1;
   color: var(--accent);
   text-decoration: underline;
+}
+
+.contact-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  opacity: 0.7;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.contact-link:hover {
+  opacity: 1;
+  color: var(--accent);
 }
 
 .content { padding: 32px 40px 56px; }
