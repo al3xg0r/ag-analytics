@@ -3,7 +3,7 @@
 Lightweight • Privacy-first • Serverless • Multi-site web analytics, built entirely on Cloudflare.
 
 No VPS. No Docker. No PHP. No MySQL. No Google Analytics. No cookies.
-Just a Cloudflare Worker, a D1 database, and a KV cache.
+Just a Cloudflare Worker and a D1 database — nothing else to provision.
 
 ---
 
@@ -13,13 +13,13 @@ AG Analytics is a self-hosted alternative to Google Analytics / Umami / GoatCoun
 to be deployed by someone with **zero Cloudflare experience** in about 5 minutes.
 
 - One Worker handles the tracking API, the admin API, and serves the dashboard.
-- One D1 database (SQLite, serverless) stores everything.
-- One KV namespace caches expensive dashboard queries for 15 minutes.
+- One D1 database (SQLite, serverless) stores everything — including the dashboard query cache
+  (see [§9](#9-performance-limits-and-staying-inside-the-free-plan) for why there's no separate KV cache anymore).
 - One tiny `widget.js` script (no cookies, no fingerprinting) is pasted into any website.
 - One dashboard (plain HTML/CSS/JS, no build step) lets you view the stats and manage sites.
 
 ```
-GitHub  →  Cloudflare Worker  →  D1 (data)  +  KV (cache)
+GitHub  →  Cloudflare Worker  →  D1 (data + cache)
                  ▲
                  │
      widget.js on your websites
@@ -98,58 +98,39 @@ database_id = "11111111-2222-3333-4444-555555555555"
 
 Copy the `database_id` value.
 
-### Step 5 — Create the cache namespace
+### Step 5 — Fill in `wrangler.toml`
 
-```bash
-npx wrangler kv namespace create AGANALITICS_CACHE
-```
-
-This prints something like:
-
-```
-[[kv_namespaces]]
-binding = "AGANALITICS_CACHE"
-id = "abcdef1234567890abcdef1234567890"
-```
-
-Copy the `id` value.
-
-### Step 6 — Fill in `wrangler.toml`
-
-Open `wrangler.toml` in any text editor and replace the two placeholder values:
+Open `wrangler.toml` in any text editor and replace the placeholder value:
 
 ```toml
 [[d1_databases]]
 binding = "DB"
 database_name = "ag_analytics_db"
 database_id = "PASTE_YOUR_D1_DATABASE_ID_HERE"
-
-[[kv_namespaces]]
-binding = "AGANALITICS_CACHE"
-id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
 ```
 
 Save the file.
 
 > `wrangler.toml` also ships with a `[triggers]` section (a weekly cleanup job, see section 9) —
-> that part is already complete and doesn't need editing, it's unrelated to the two IDs above.
+> that part is already complete and doesn't need editing, it's unrelated to the ID above.
 
-### Step 7 — Create the database tables
+### Step 6 — Create the database tables
 
 ```bash
 npm run db:migrate:remote
 ```
 
-This runs `migrations/0001_init.sql` against your new D1 database — it creates the `sites`,
-`visits`, `sessions`, `events`, and `admins` tables. You never have to write or run SQL by hand
-again.
+This runs everything in `migrations/` against your new D1 database, in order — it creates the
+`sites`, `visits`, `sessions`, `events`, `admins`, and `cache` tables. You never have to write or
+run SQL by hand again.
 
-> **Already deployed before and upgrading?** This file only ever *creates* tables/indexes that
+> **Already deployed before and upgrading?** These files only ever *create* tables/indexes that
 > don't exist yet (`CREATE TABLE IF NOT EXISTS`), so it's always safe to re-run — it won't touch
 > or delete your existing data. Re-run it any time you pull a newer version of this project to
-> pick up new tables (like `events`, added for the custom-events feature).
+> pick up new tables (like `cache`, added when the dashboard query cache moved off KV — see
+> [§9](#9-performance-limits-and-staying-inside-the-free-plan)).
 
-### Step 8 — Set your login secret
+### Step 7 — Set your login secret
 
 The dashboard signs login sessions with a secret key. Generate one and store it:
 
@@ -162,7 +143,7 @@ When prompted, paste any long random string (32+ characters). A quick way to gen
 - macOS/Linux: `openssl rand -base64 32`
 - Windows PowerShell: `[Convert]::ToBase64String((1..32|%{Get-Random -Max 256}))`
 
-### Step 9 — Deploy
+### Step 8 — Deploy
 
 ```bash
 npm run deploy
@@ -313,13 +294,14 @@ own dashboard panel yet.
 
 ```
 ag-analytics/
-├── wrangler.toml          Cloudflare configuration (D1, KV, static assets, weekly cleanup cron)
+├── wrangler.toml          Cloudflare configuration (D1, static assets, weekly cleanup cron)
 ├── package.json           npm scripts (dev, deploy, migrate)
 ├── migrations/
-│   └── 0001_init.sql      Database schema
+│   ├── 0001_init.sql      Core schema: sites, visits, sessions, events, admins
+│   └── 0002_cache.sql     Dashboard query cache table (replaces Workers KV)
 ├── src/
 │   ├── index.js           Worker entry point / router
-│   ├── lib/                Shared helpers (auth, db, kv, parsing)
+│   ├── lib/                Shared helpers (auth, db, cache, parsing)
 │   └── routes/              One file per API endpoint
 └── public/
     ├── widget.js         The script embedded on tracked websites
@@ -343,8 +325,8 @@ npm run db:migrate:local   # creates the schema in a local, on-disk D1 copy
 npm run dev                 # starts the Worker on http://localhost:8787
 ```
 
-`wrangler dev` runs the whole stack (Worker + local D1 + local KV) on your machine, so you can
-test changes before deploying.
+`wrangler dev` runs the whole stack (Worker + local D1, including the query cache table) on your
+machine, so you can test changes before deploying.
 
 ---
 
@@ -357,34 +339,43 @@ An earlier version of this project tracked "online now" visitors by writing to K
 heartbeat (roughly every 30 seconds per open tab). Cloudflare's free plan allows only
 **1,000 KV writes per day per namespace**, so even a handful of visitors could exhaust that
 quota within minutes — the online counter would silently stop updating, and everything else
-sharing that KV namespace would be affected too. That has been fixed:
+sharing that KV namespace would be affected too. Later, once more dashboard panels were added
+(each with its own cached query), the *dashboard's own cache* started running into the same
+1,000-writes-a-day wall on any actively-viewed site. Both problems had the same root cause —
+KV's tight, account-wide write quota — and the same fix:
 
-- **Online tracking now lives entirely in D1** (`sessions.last_seen`), not KV. D1's free plan
-  allows 100,000 writes and 5,000,000 reads per day, so this is essentially free at small scale.
-  No KV writes happen for online tracking at all anymore.
+- **KV is no longer used anywhere in this project.** Both online tracking and the dashboard
+  query cache live entirely in D1 now (`sessions.last_seen` for online tracking, a dedicated
+  `cache` table — see `migrations/0002_cache.sql` — for everything else). D1's free plan allows
+  100,000 writes and 5,000,000 reads per day, which is an order of magnitude more headroom than
+  KV's free tier at both the read and (especially) the write side, and it's account-wide the
+  same way KV's limit was — the difference is simply how much more room there is.
 - **The tracker's heartbeat interval was increased from 30s to 45s**, further reducing write volume.
-- **Dashboard aggregate queries (visitors, pages, referrers, etc.) are cached in KV for 15 minutes**
-  by default (up from 5). You can change this in `src/lib/kv.js` (`CACHE_TTL_SECONDS`) — raise it
-  further if you're close to a quota, lower it if you want fresher numbers and have headroom.
+- **Dashboard aggregate queries (visitors, pages, referrers, bots, etc.) are cached in D1 for 30
+  minutes** by default (up from KV's original 15). Change this in `src/lib/cache.js`
+  (`CACHE_TTL_SECONDS`) — raise it further if you're ever close to a quota, lower it if you want
+  fresher numbers and have headroom. Expired rows clean themselves up on the next read that hits
+  them, plus a sweep on the same weekly cron that prunes old visits/sessions/events.
 - **The dashboard only polls `/online`** (a single cheap query) every 60 seconds while open; it no
   longer re-fetches the full dashboard just to refresh that one number.
 - **Old data is deleted automatically.** A scheduled Worker (see `scheduled()` in `src/index.js`,
   configured via `[triggers]` in `wrangler.toml`) runs weekly and deletes visits, sessions, and
   custom events older than 396 days (13 months — one full month more than the longest dashboard
-  period, "12 months"). Cron triggers are free on every Workers plan, including free. Change the
-  `RETENTION_DAYS` constant at the top of `src/index.js` to keep data for a shorter or longer
-  window, and adjust the schedule itself in `wrangler.toml` (`crons = ["0 3 * * SUN"]`, currently
-  every Sunday at 03:00 UTC) if you want it to run more or less often. D1's free plan includes
-  5GB of storage — without cleanup, a high-traffic site could eventually approach that limit.
+  period, "12 months"), plus any expired cache rows. Cron triggers are free on every Workers plan,
+  including free. Change the `RETENTION_DAYS` constant at the top of `src/index.js` to keep data
+  for a shorter or longer window, and adjust the schedule itself in `wrangler.toml`
+  (`crons = ["0 3 * * SUN"]`, currently every Sunday at 03:00 UTC) if you want it to run more or
+  less often. D1's free plan includes 5GB of storage — without cleanup, a high-traffic site could
+  eventually approach that limit.
 - **Pages are grouped by path, not by full URL.** If your host serves the same site from more than
   one hostname (a custom domain plus an auto-generated preview/gateway URL — common with static
   site hosts and IPFS-style platforms), a visit to `/blog/post` is recorded as `/blog/post`
   regardless of which hostname it came in on, so it doesn't fragment into separate rows in
   **Top pages**. Links in the dashboard are rebuilt using the site's own registered domain.
 
-If you are on Cloudflare's free plan and expect meaningful traffic, KV writes are now the least of
-your concerns — watch your **D1 row reads/writes** and **Worker request count** instead, both of
-which have generous free-tier allowances for a small-to-medium site.
+If you are on Cloudflare's free plan and expect meaningful traffic, watch your **D1 row
+reads/writes** and **Worker request count** instead — both have generous free-tier allowances for
+a small-to-medium site, and there's no separate KV quota to worry about anymore.
 
 ---
 
@@ -392,8 +383,8 @@ which have generous free-tier allowances for a small-to-medium site.
 
 If you visit your own site and don't see it show up, check these in order:
 
-1. **Wait up to 15 minutes.** Dashboard numbers (visitors, pages, referrers, etc.) are cached for
-   15 minutes to save on database reads (see section 9). The visit itself is recorded instantly —
+1. **Wait up to 30 minutes.** Dashboard numbers (visitors, pages, referrers, etc.) are cached for
+   30 minutes to save on database reads (see section 9). The visit itself is recorded instantly —
    only the dashboard's *summary* lags. Switching periods or waiting it out will show it.
 2. **Ad blockers and privacy extensions.** This is the most common cause of "missing" visits on
    any self-hosted analytics tool. Many blocklists (EasyPrivacy and similar) specifically target

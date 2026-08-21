@@ -1,5 +1,5 @@
 import { getPeriodRange } from "../lib/db.js";
-import { cacheGet, cacheSet } from "../lib/kv.js";
+import { cacheGet, cacheSet } from "../lib/cache.js";
 import { json, error } from "../lib/response.js";
 
 // Groups visits into daily buckets (or hourly buckets for "today"/"yesterday")
@@ -11,7 +11,7 @@ export async function handleStats(request, env) {
   if (!siteId) return error("site_id is required");
 
   const cacheKey = `stats:${siteId}:${period}`;
-  const cached = await cacheGet(env.AGANALITICS_CACHE, cacheKey);
+  const cached = await cacheGet(env.DB, cacheKey);
   if (cached) return json(cached);
 
   const { start, end } = getPeriodRange(period);
@@ -33,6 +33,6 @@ export async function handleStats(request, env) {
     .all();
 
   const payload = { site_id: siteId, period, buckets: results };
-  await cacheSet(env.AGANALITICS_CACHE, cacheKey, payload);
+  await cacheSet(env.DB, cacheKey, payload);
   return json(payload);
 }

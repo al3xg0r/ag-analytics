@@ -23,6 +23,7 @@ import {
 } from "./routes/sites.js";
 import { requireAdmin } from "./lib/auth.js";
 import { pruneOldData } from "./lib/db.js";
+import { pruneExpiredCache } from "./lib/cache.js";
 import { error, handleOptions } from "./lib/response.js";
 
 // Routes that require a valid admin JWT (everything that reads or manages
@@ -80,11 +81,14 @@ export default {
 
   // Runs on the schedule configured in wrangler.toml ([triggers] crons).
   // Deletes visits/sessions/events older than RETENTION_DAYS, across all sites,
-  // to keep D1 storage from growing forever (5GB on the free plan).
+  // to keep D1 storage from growing forever (5GB on the free plan). Also
+  // sweeps any expired cache rows that were written once and never read
+  // again (a normal cache read already self-cleans its own expired row, see
+  // lib/cache.js — this just catches the rest).
   async scheduled(event, env, ctx) {
     ctx.waitUntil(
-      pruneOldData(env.DB, RETENTION_DAYS).then((result) => {
-        console.log("Scheduled cleanup:", JSON.stringify(result));
+      Promise.all([pruneOldData(env.DB, RETENTION_DAYS), pruneExpiredCache(env.DB)]).then(([pruneResult, cacheDeleted]) => {
+        console.log("Scheduled cleanup:", JSON.stringify({ ...pruneResult, cacheDeleted }));
       })
     );
   },

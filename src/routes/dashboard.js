@@ -1,5 +1,5 @@
 import { getPeriodRange, getPreviousPeriodRange, countOnline } from "../lib/db.js";
-import { cacheGet, cacheSet } from "../lib/kv.js";
+import { cacheGet, cacheSet } from "../lib/cache.js";
 import { json, error } from "../lib/response.js";
 
 // Runs the four summary queries (visitors, views, avg time, bounce rate) for
@@ -57,7 +57,7 @@ export async function handleDashboard(request, env) {
   if (!siteId) return error("site_id is required");
 
   const cacheKey = `dashboard:${siteId}:${period}`;
-  const cached = await cacheGet(env.AGANALITICS_CACHE, cacheKey);
+  const cached = await cacheGet(env.DB, cacheKey);
 
   // Online count is intentionally never cached (see routes/online.js for the
   // lightweight endpoint the dashboard polls separately every 60s).
@@ -90,6 +90,6 @@ export async function handleDashboard(request, env) {
       : null,
   };
 
-  await cacheSet(env.AGANALITICS_CACHE, cacheKey, result);
+  await cacheSet(env.DB, cacheKey, result);
   return json({ ...result, online, cached: false });
 }

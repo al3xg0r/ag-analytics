@@ -14,11 +14,6 @@ binding = "DB"
 database_name = "ag_analytics_db"
 database_id = "08eb91d1-1c3b-4f96-8005-cacee53b8f3e"
 
-# KV namespace, created with: wrangler kv namespace create CACHE
-[[kv_namespaces]]
-binding = "AGANALITICS_CACHE"
-id = "f628561c8b3b40e2ae2e2eb8864d11f2"
-
 # Weekly scheduled cleanup (see the `scheduled` handler in src/index.js):
 # deletes visits/sessions/events older than the retention window so D1 storage
 # doesn't grow forever. Runs every Sunday at 03:00 UTC. Cron triggers are free
@@ -35,5 +30,5 @@ APP_NAME = "AG Analytics"
 # a glance whether you're looking at a freshly deployed version or a stale
 # cached copy of the frontend. Bump both alongside the version in package.json
 # whenever you cut a release.
-APP_VERSION = "0.3.0-beta.1"
-APP_RELEASE_DATE = "2026-08-19"
+APP_VERSION = "0.3.1-beta.1"
+APP_RELEASE_DATE = "2026-08-13"
