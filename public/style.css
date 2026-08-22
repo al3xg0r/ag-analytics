@@ -557,6 +557,22 @@ td.label a:hover { color: var(--accent); text-decoration: underline; }
 td.label .flag { margin-right: 7px; font-size: 14px; }
 td.label img.favicon { width: 14px; height: 14px; margin-right: 7px; vertical-align: -2px; border-radius: 3px; }
 
+/* The "No data yet" placeholder row. A plain ".muted" class here used to
+   lose the cascade to ".label" (same selector specificity, but ".label" is
+   declared later in this file) and render in the normal text color —
+   visually indistinguishable from a real row. This is deliberately its own
+   combined selector (".label.table-empty", higher specificity than ".label"
+   alone) so it reliably wins regardless of source order, plus italics and
+   centering so an empty panel reads as an empty state at a glance. */
+td.label.table-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  opacity: 0.75;
+  white-space: normal;
+  max-width: none;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;

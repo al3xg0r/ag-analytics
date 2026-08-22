@@ -775,7 +775,7 @@ function renderTable(tableId, items, options = {}) {
   const { formatLabel, linkHref, icon } = options;
   const tbody = document.querySelector(`#${tableId} tbody`);
   if (!items || items.length === 0) {
-    tbody.innerHTML = `<tr><td class="label muted" colspan="2">No data yet</td></tr>`;
+    tbody.innerHTML = `<tr><td class="label table-empty" colspan="2">No data yet</td></tr>`;
     return;
   }
   tbody.innerHTML = items
