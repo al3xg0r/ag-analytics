@@ -10,6 +10,17 @@ const PANEL_ORDER_KEY = "ag_panel_order";
 const CURRENT_SITE_KEY = "ag_current_site";
 const ALL_PANELS = ["pages", "referrers", "search-engines", "search-queries", "campaigns", "countries", "browsers", "os", "devices", "events", "bots"];
 
+// Internal event names get a plain-English label in the Custom events panel
+// instead of showing the raw snake_case name. "non_web_request" specifically
+// is written by collect.js for hits whose url wasn't http(s) — most often a
+// locally saved/opened copy of the page (common with AV/security sandboxes
+// opening a cached copy to check it, or someone hitting Save As and opening
+// it offline). It's tracked separately from real page views on purpose, see
+// collect.js for the full reasoning.
+const EVENT_LABELS = {
+  non_web_request: "Non-page request (e.g. a locally opened copy of the site)",
+};
+
 let state = {
   sites: [],
   currentSiteId: localStorage.getItem(CURRENT_SITE_KEY) || null,
@@ -772,7 +783,7 @@ function drawChart(buckets) {
 }
 
 function renderTable(tableId, items, options = {}) {
-  const { formatLabel, linkHref, icon } = options;
+  const { formatLabel, linkHref, icon, titleFor } = options;
   const tbody = document.querySelector(`#${tableId} tbody`);
   if (!items || items.length === 0) {
     tbody.innerHTML = `<tr><td class="label table-empty" colspan="2">No data yet</td></tr>`;
@@ -780,13 +791,14 @@ function renderTable(tableId, items, options = {}) {
   }
   tbody.innerHTML = items
     .map((item) => {
-      const text = formatLabel ? formatLabel(item.label) : item.label;
-      const iconHtml = icon ? icon(item.label) : "";
+      const text = formatLabel ? formatLabel(item.label, item) : item.label;
+      const iconHtml = icon ? icon(item.label, item) : "";
       const inner = iconHtml + text;
       const cellContent = linkHref
-        ? `<a href="${linkHref(item.label)}" target="_blank" rel="noopener noreferrer">${inner}</a>`
+        ? `<a href="${linkHref(item.label, item)}" target="_blank" rel="noopener noreferrer">${inner}</a>`
         : inner;
-      return `<tr><td class="label" title="${item.label}">${cellContent}</td><td class="value">${item.views}</td></tr>`;
+      const title = titleFor ? titleFor(item.label, item) : item.label;
+      return `<tr><td class="label" title="${title}">${cellContent}</td><td class="value">${item.views}</td></tr>`;
     })
     .join("");
 }
@@ -847,7 +859,12 @@ async function loadBreakdowns() {
   });
   renderTable("table-referrers", referrers.items, {
     icon: (label) => `<img class="favicon" src="https://icons.duckduckgo.com/ip3/${label}.ico" alt="" loading="lazy" />`,
-    linkHref: (label) => `https://${label}`,
+    // Prefer the actual full page that linked to you (sample_url, from the
+    // most recent visit with this referrer domain) over just guessing at
+    // the domain's homepage — falls back to the domain if a row somehow
+    // has no sample (shouldn't normally happen, but stay safe).
+    linkHref: (label, item) => item.sample_url || `https://${label}`,
+    titleFor: (label, item) => item.sample_url || label,
   });
   renderTable("table-search-engines", searchEngines.items);
   renderTable("table-countries", countries.items, {
@@ -858,7 +875,10 @@ async function loadBreakdowns() {
   renderTable("table-os", os.items);
   renderTable("table-devices", devices.items);
   renderTable("table-campaigns", campaigns.items);
-  renderTable("table-events", events.items);
+  renderTable("table-events", events.items, {
+    formatLabel: (label) => EVENT_LABELS[label] || label,
+    titleFor: (label) => EVENT_LABELS[label] || label,
+  });
   renderTable("table-bots", bots.items);
   renderTable("table-search-queries", searchQueries.items);
 }
