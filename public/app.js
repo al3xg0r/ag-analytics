@@ -785,6 +785,14 @@ function drawChart(buckets) {
 function renderTable(tableId, items, options = {}) {
   const { formatLabel, linkHref, icon, titleFor } = options;
   const tbody = document.querySelector(`#${tableId} tbody`);
+  if (items === null) {
+    // Distinct from the empty-but-successful state below: this panel's
+    // request actually failed (see the console for the real error). Shown
+    // in red so a broken panel is never silently indistinguishable from an
+    // empty one.
+    tbody.innerHTML = `<tr><td class="label table-error" colspan="2">⚠ Failed to load — check console / retry</td></tr>`;
+    return;
+  }
   if (!items || items.length === 0) {
     tbody.innerHTML = `<tr><td class="label table-empty" colspan="2">No data yet</td></tr>`;
     return;
@@ -829,19 +837,42 @@ function countryName(code) {
 
 async function loadBreakdowns() {
   const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=25`;
-  const [pages, referrers, searchEngines, countries, browsers, os, devices, campaigns, events, bots, searchQueries] = await Promise.all([
-    api(`/pages?${q}`),
-    api(`/referrers?${q}`),
-    api(`/search-engines?${q}`),
-    api(`/countries?${q}`),
-    api(`/browsers?${q}`),
-    api(`/devices?${q}&dimension=os`),
-    api(`/devices?${q}&dimension=device_type`),
-    api(`/campaigns?${q}`),
-    api(`/events?${q}`),
-    api(`/bots?${q}`),
-    api(`/search-queries?${q}`),
-  ]);
+
+  // Each panel's data is fetched independently via Promise.allSettled rather
+  // than Promise.all: if any single endpoint fails (a bad query, a temporary
+  // D1 hiccup, etc.), the other panels still update normally instead of the
+  // whole batch silently aborting and leaving every panel showing whatever
+  // was last rendered successfully — which looks exactly like "nothing is
+  // updating" with zero indication of why.
+  const endpoints = {
+    pages: `/pages?${q}`,
+    referrers: `/referrers?${q}`,
+    searchEngines: `/search-engines?${q}`,
+    countries: `/countries?${q}`,
+    browsers: `/browsers?${q}`,
+    os: `/devices?${q}&dimension=os`,
+    devices: `/devices?${q}&dimension=device_type`,
+    campaigns: `/campaigns?${q}`,
+    events: `/events?${q}`,
+    bots: `/bots?${q}`,
+    searchQueries: `/search-queries?${q}`,
+  };
+  const keys = Object.keys(endpoints);
+  const settled = await Promise.allSettled(keys.map((key) => api(endpoints[key])));
+
+  const data = {};
+  settled.forEach((result, i) => {
+    const key = keys[i];
+    if (result.status === "fulfilled") {
+      data[key] = result.value.items;
+    } else {
+      // null (as opposed to an empty array) is renderTable's signal to show
+      // an error state instead of "No data yet" — those mean two very
+      // different things and shouldn't look the same.
+      data[key] = null;
+      console.error(`Failed to load ${key}:`, result.reason);
+    }
+  });
 
   const currentSite = state.sites.find((s) => s.id === state.currentSiteId);
   // Defensive: older/mistyped data may have a domain stored with a protocol
@@ -851,13 +882,13 @@ async function loadBreakdowns() {
   const cleanDomain = currentSite ? currentSite.domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "") : "";
   const siteOrigin = cleanDomain ? `https://${cleanDomain}` : "";
 
-  renderTable("table-pages", pages.items, {
+  renderTable("table-pages", data.pages, {
     // visits.url is stored as a normalized path (e.g. "/blog/post"), not a full
     // URL — see lib/utm.js normalizePagePath for why. Rebuild the real link
     // using the site's own registered domain.
     linkHref: (label) => siteOrigin + label,
   });
-  renderTable("table-referrers", referrers.items, {
+  renderTable("table-referrers", data.referrers, {
     // label is now the full referrer URL (see referrers.js) — extract just
     // the hostname for the favicon lookup, that service needs a bare domain.
     icon: (label) => {
@@ -871,21 +902,21 @@ async function loadBreakdowns() {
     },
     linkHref: (label) => label,
   });
-  renderTable("table-search-engines", searchEngines.items);
-  renderTable("table-countries", countries.items, {
+  renderTable("table-search-engines", data.searchEngines);
+  renderTable("table-countries", data.countries, {
     icon: (label) => `<span class="flag">${countryFlag(label)}</span>`,
     formatLabel: (label) => countryName(label) || label,
   });
-  renderTable("table-browsers", browsers.items);
-  renderTable("table-os", os.items);
-  renderTable("table-devices", devices.items);
-  renderTable("table-campaigns", campaigns.items);
-  renderTable("table-events", events.items, {
+  renderTable("table-browsers", data.browsers);
+  renderTable("table-os", data.os);
+  renderTable("table-devices", data.devices);
+  renderTable("table-campaigns", data.campaigns);
+  renderTable("table-events", data.events, {
     formatLabel: (label) => EVENT_LABELS[label] || label,
     titleFor: (label) => EVENT_LABELS[label] || label,
   });
-  renderTable("table-bots", bots.items);
-  renderTable("table-search-queries", searchQueries.items);
+  renderTable("table-bots", data.bots);
+  renderTable("table-search-queries", data.searchQueries);
 }
 
 // Refresh only the "online now" number regularly. Everything else only

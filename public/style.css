@@ -573,6 +573,17 @@ td.label.table-empty {
   max-width: none;
 }
 
+/* A panel whose request genuinely failed — kept visually distinct from
+   .table-empty (above) on purpose, since "broken" and "just no data" need
+   to read differently at a glance. */
+td.label.table-error {
+  color: var(--negative);
+  text-align: center;
+  opacity: 0.9;
+  white-space: normal;
+  max-width: none;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
