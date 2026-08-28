@@ -858,13 +858,18 @@ async function loadBreakdowns() {
     linkHref: (label) => siteOrigin + label,
   });
   renderTable("table-referrers", referrers.items, {
-    icon: (label) => `<img class="favicon" src="https://icons.duckduckgo.com/ip3/${label}.ico" alt="" loading="lazy" />`,
-    // Prefer the actual full page that linked to you (sample_url, from the
-    // most recent visit with this referrer domain) over just guessing at
-    // the domain's homepage — falls back to the domain if a row somehow
-    // has no sample (shouldn't normally happen, but stay safe).
-    linkHref: (label, item) => item.sample_url || `https://${label}`,
-    titleFor: (label, item) => item.sample_url || label,
+    // label is now the full referrer URL (see referrers.js) — extract just
+    // the hostname for the favicon lookup, that service needs a bare domain.
+    icon: (label) => {
+      let domain;
+      try {
+        domain = new URL(label).hostname;
+      } catch {
+        return "";
+      }
+      return `<img class="favicon" src="https://icons.duckduckgo.com/ip3/${domain}.ico" alt="" loading="lazy" />`;
+    },
+    linkHref: (label) => label,
   });
   renderTable("table-search-engines", searchEngines.items);
   renderTable("table-countries", countries.items, {

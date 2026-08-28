@@ -2,12 +2,12 @@ import { getPeriodRange } from "../lib/db.js";
 import { cacheGet, cacheSet } from "../lib/cache.js";
 import { json, error } from "../lib/response.js";
 
-// Grouped by domain (not the full URL) so the panel stays a useful "who
-// sends me traffic" overview rather than fragmenting into one row per link —
-// but each row also carries `sample_url`: the full referrer URL from that
-// domain's most recent visit, via a correlated subquery. The dashboard uses
-// that for the actual link + hover tooltip, so you can see and open the
-// exact page that linked to you, not just guess at the domain's homepage.
+// Grouped by the full referring URL (not just the domain) — each row is a
+// distinct page that linked to you, with its own view count. Still filters
+// on referrer_domain IS NOT NULL (not referrer itself) to exclude same-site
+// and search-engine traffic: parseReferrer (lib/utm.js) nulls out
+// referrerDomain for those cases while leaving the raw referrer URL
+// populated, and search engines already have their own dedicated panel.
 export async function handleReferrers(request, env) {
   const url = new URL(request.url);
   const siteId = url.searchParams.get("site_id");
@@ -22,18 +22,14 @@ export async function handleReferrers(request, env) {
   const { start, end } = getPeriodRange(period);
 
   const { results } = await env.DB.prepare(
-    `SELECT v.referrer_domain as label, COUNT(*) as views, COUNT(DISTINCT v.visitor_hash) as visitors,
-       (SELECT v2.referrer FROM visits v2
-        WHERE v2.site_id = v.site_id AND v2.referrer_domain = v.referrer_domain
-          AND v2.created_at BETWEEN ? AND ?
-        ORDER BY v2.created_at DESC LIMIT 1) as sample_url
-     FROM visits v
-     WHERE v.site_id = ? AND v.created_at BETWEEN ? AND ? AND v.referrer_domain IS NOT NULL
+    `SELECT referrer as label, COUNT(*) as views, COUNT(DISTINCT visitor_hash) as visitors
+     FROM visits
+     WHERE site_id = ? AND created_at BETWEEN ? AND ? AND referrer_domain IS NOT NULL
      GROUP BY label
      ORDER BY views DESC
      LIMIT ?`
   )
-    .bind(start, end, siteId, start, end, limit)
+    .bind(siteId, start, end, limit)
     .all();
 
   const payload = { site_id: siteId, period, items: results };
