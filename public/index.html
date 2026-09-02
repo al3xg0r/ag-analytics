@@ -76,7 +76,13 @@
           <button data-period="30d">30 days</button>
           <button data-period="12m">12 months</button>
           <button data-period="all">All time</button>
+          <button data-period="custom">Custom range</button>
         </div>
+        <form id="form-custom-range" class="custom-range hidden">
+          <label>From<input type="date" name="start" required /></label>
+          <label>To<input type="date" name="end" required /></label>
+          <button type="submit" class="btn-primary small full-width">Apply</button>
+        </form>
       </div>
 
       <div class="sidebar-footer">

@@ -1,4 +1,4 @@
-import { getPeriodRange, getPreviousPeriodRange, countOnline } from "../lib/db.js";
+import { resolvePeriod, getPreviousPeriodRange, countOnline } from "../lib/db.js";
 import { cacheGet, cacheSet } from "../lib/cache.js";
 import { json, error } from "../lib/response.js";
 
@@ -53,10 +53,11 @@ function percentChange(previous, current) {
 export async function handleDashboard(request, env) {
   const url = new URL(request.url);
   const siteId = url.searchParams.get("site_id");
-  const period = url.searchParams.get("period") || "today";
   if (!siteId) return error("site_id is required");
 
-  const cacheKey = `dashboard:${siteId}:${period}`;
+  const { period, start, end, cacheKeyPeriod } = resolvePeriod(url, "today");
+
+  const cacheKey = `dashboard:${siteId}:${cacheKeyPeriod}`;
   const cached = await cacheGet(env.DB, cacheKey);
 
   // Online count is intentionally never cached (see routes/online.js for the
@@ -66,7 +67,6 @@ export async function handleDashboard(request, env) {
     return json({ ...cached, online, cached: true });
   }
 
-  const { start, end } = getPeriodRange(period);
   const previousRange = getPreviousPeriodRange(period);
 
   const [current, previous, online] = await Promise.all([

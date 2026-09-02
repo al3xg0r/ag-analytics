@@ -25,9 +25,21 @@ let state = {
   sites: [],
   currentSiteId: localStorage.getItem(CURRENT_SITE_KEY) || null,
   currentPeriod: "today",
+  customRange: null, // { start: "YYYY-MM-DD", end: "YYYY-MM-DD" }, only set while currentPeriod === "custom"
   chartBuckets: [],
   visibleSeries: { views: true, visitors: true },
 };
+
+// Appends "period=..." (and, for a custom range, "start=...&end=...") to a
+// query string. The single place all three data-loading functions below go
+// through, so a custom range only ever needs to be wired up once.
+function periodQuery() {
+  let q = `period=${state.currentPeriod}`;
+  if (state.currentPeriod === "custom" && state.customRange) {
+    q += `&start=${state.customRange.start}&end=${state.customRange.end}`;
+  }
+  return q;
+}
 
 // ---------- small helpers ----------
 
@@ -514,6 +526,36 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
   button.classList.add("active");
   state.currentPeriod = button.dataset.period;
   closeMobileMenu();
+
+  const customRangeForm = document.getElementById("form-custom-range");
+  if (state.currentPeriod === "custom") {
+    // Pre-fill with a sensible default (the last 7 days) so clicking the tab
+    // immediately shows *something*, exactly like every other period tab —
+    // the date inputs are then just there to narrow it down further.
+    if (!state.customRange) {
+      const today = new Date();
+      const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+      const toDateInput = (d) => d.toISOString().slice(0, 10);
+      state.customRange = { start: toDateInput(weekAgo), end: toDateInput(today) };
+      customRangeForm.start.value = state.customRange.start;
+      customRangeForm.end.value = state.customRange.end;
+    }
+    customRangeForm.classList.remove("hidden");
+  } else {
+    customRangeForm.classList.add("hidden");
+  }
+
+  await refreshAll();
+});
+
+document.getElementById("form-custom-range").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const start = form.get("start");
+  const end = form.get("end");
+  if (!start || !end || start > end) return; // native date inputs already block most of this, but stay safe
+  state.customRange = { start, end };
+  closeMobileMenu();
   await refreshAll();
 });
 
@@ -525,7 +567,7 @@ async function refreshAll() {
 }
 
 async function loadDashboard() {
-  const data = await api(`/dashboard?site_id=${state.currentSiteId}&period=${state.currentPeriod}`);
+  const data = await api(`/dashboard?site_id=${state.currentSiteId}&${periodQuery()}`);
   document.getElementById("stat-visitors").textContent = data.unique_visitors;
   document.getElementById("stat-views").textContent = data.page_views;
   document.getElementById("stat-time").textContent = formatSeconds(data.avg_time_seconds);
@@ -573,7 +615,7 @@ async function loadOnline() {
 }
 
 async function loadChart() {
-  const data = await api(`/stats?site_id=${state.currentSiteId}&period=${state.currentPeriod}`);
+  const data = await api(`/stats?site_id=${state.currentSiteId}&${periodQuery()}`);
   state.chartBuckets = data.buckets;
   drawChart(state.chartBuckets);
 }
@@ -836,7 +878,7 @@ function countryName(code) {
 }
 
 async function loadBreakdowns() {
-  const q = `site_id=${state.currentSiteId}&period=${state.currentPeriod}&limit=25`;
+  const q = `site_id=${state.currentSiteId}&${periodQuery()}&limit=25`;
 
   // Each panel's data is fetched independently via Promise.allSettled rather
   // than Promise.all: if any single endpoint fails (a bad query, a temporary

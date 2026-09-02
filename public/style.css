@@ -234,6 +234,40 @@ form > button[type="submit"] {
 }
 .period-tabs button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
+.custom-range {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.custom-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.custom-range input[type="date"] {
+  padding: 8px 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color-scheme: light dark; /* lets the browser's native date-picker icon follow the current theme */
+}
+
+.custom-range .btn-primary.small { padding: 8px 10px; font-size: 12px; margin-top: 2px; }
+
 .sidebar-footer {
   margin-top: auto;
   display: flex;

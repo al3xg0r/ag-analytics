@@ -171,7 +171,7 @@ export async function pruneOldData(db, retentionDays) {
 
 // Returns { start, end } timestamps (ms) in UTC for a named period.
 // "today" and "yesterday" are calendar-day boundaries; the rest are rolling windows.
-export function getPeriodRange(period) {
+export function getPeriodRange(period, customRange) {
   const day = 24 * 60 * 60 * 1000;
   const now = Date.now();
   const startOfToday = Math.floor(now / day) * day;
@@ -187,6 +187,15 @@ export function getPeriodRange(period) {
       return { start: now - day * 30, end: now };
     case "12m":
       return { start: now - day * 365, end: now };
+    case "custom":
+      // A valid, already-parsed {start, end} (see resolvePeriod below) is
+      // expected here. Falls back to the same window as "7d" if it's
+      // missing or malformed, rather than erroring — same spirit as the
+      // unrecognized-period fallback below.
+      if (customRange && Number.isFinite(customRange.start) && Number.isFinite(customRange.end) && customRange.start <= customRange.end) {
+        return { start: customRange.start, end: customRange.end };
+      }
+      return { start: now - day * 7, end: now };
     case "all":
     default:
       return { start: 0, end: now };
@@ -194,10 +203,41 @@ export function getPeriodRange(period) {
 }
 
 // The immediately preceding window of the same length, used for "vs last period"
-// comparisons on the dashboard. "all" has no meaningful previous window.
-export function getPreviousPeriodRange(period) {
-  if (period === "all") return null;
-  const { start, end } = getPeriodRange(period);
+// comparisons on the dashboard. "all" has no meaningful previous window — and
+// neither does "custom": an arbitrary user-picked range has no natural
+// "period before it" the way a rolling "7 days" does.
+export function getPreviousPeriodRange(period, customRange) {
+  if (period === "all" || period === "custom") return null;
+  const { start, end } = getPeriodRange(period, customRange);
   const length = end - start;
   return { start: start - length, end: start };
+}
+
+// Parses "period" (and, for period=custom, the "start"/"end" date-string
+// query params, e.g. "2026-08-01") from a request's query string into
+// concrete {start, end} millisecond timestamps ready for a SQL BETWEEN.
+// Also returns `cacheKeyPeriod`: safe to drop straight into a cache key.
+// For a custom range this embeds the actual resolved dates, so two
+// different custom ranges never collide under the same cache entry; for
+// every other period it's just the period string itself, since those
+// recompute a fresh `end` (usually "now") on every request — embedding
+// that would make every request a unique cache key and defeat caching
+// entirely.
+export function resolvePeriod(url, defaultPeriod = "7d") {
+  const period = url.searchParams.get("period") || defaultPeriod;
+  let customRange = null;
+  if (period === "custom") {
+    const startParam = url.searchParams.get("start");
+    const endParam = url.searchParams.get("end");
+    if (startParam && endParam) {
+      const start = new Date(`${startParam}T00:00:00Z`).getTime();
+      const end = new Date(`${endParam}T23:59:59.999Z`).getTime();
+      if (Number.isFinite(start) && Number.isFinite(end) && start <= end) {
+        customRange = { start, end };
+      }
+    }
+  }
+  const { start, end } = getPeriodRange(period, customRange);
+  const cacheKeyPeriod = customRange ? `custom:${customRange.start}:${customRange.end}` : period;
+  return { period, start, end, cacheKeyPeriod };
 }

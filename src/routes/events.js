@@ -1,4 +1,4 @@
-import { getPeriodRange } from "../lib/db.js";
+import { resolvePeriod } from "../lib/db.js";
 import { cacheGet, cacheSet } from "../lib/cache.js";
 import { json, error } from "../lib/response.js";
 
@@ -8,15 +8,14 @@ import { json, error } from "../lib/response.js";
 export async function handleEvents(request, env) {
   const url = new URL(request.url);
   const siteId = url.searchParams.get("site_id");
-  const period = url.searchParams.get("period") || "7d";
   const limit = Math.min(parseInt(url.searchParams.get("limit") || "20", 10), 100);
   if (!siteId) return error("site_id is required");
 
-  const cacheKey = `events:${siteId}:${period}:${limit}`;
+  const { period, start, end, cacheKeyPeriod } = resolvePeriod(url);
+
+  const cacheKey = `events:${siteId}:${cacheKeyPeriod}:${limit}`;
   const cached = await cacheGet(env.DB, cacheKey);
   if (cached) return json(cached);
-
-  const { start, end } = getPeriodRange(period);
 
   const { results } = await env.DB.prepare(
     `SELECT name as label, COUNT(*) as views, COUNT(DISTINCT visitor_hash) as visitors
