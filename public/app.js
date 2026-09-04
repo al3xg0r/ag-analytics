@@ -641,7 +641,27 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
     // silently switch what the panels are showing.
     const wasHidden = customRangeForm.classList.contains("hidden");
     customRangeForm.classList.remove("hidden");
-    if (wasHidden) renderCalendar(); // first time opening — draw the current month
+    if (wasHidden) {
+      if (state.currentPeriod === "custom" && state.customRange) {
+        // Custom is already the live, applied period — show exactly what's
+        // currently applied, so you're editing your actual current view
+        // rather than starting over blind.
+        const [sy, sm, sd] = state.customRange.start.split("-").map(Number);
+        const [ey, em, ed] = state.customRange.end.split("-").map(Number);
+        calendarState.pickedStart = new Date(sy, sm - 1, sd);
+        calendarState.pickedEnd = new Date(ey, em - 1, ed);
+        calendarState.viewMonth = new Date(sy, sm - 1, 1);
+      } else {
+        // A different period is currently active, or nothing was ever
+        // applied — start from a clean slate rather than showing leftover
+        // picks from an earlier, never-applied attempt.
+        calendarState.pickedStart = null;
+        calendarState.pickedEnd = null;
+        calendarState.viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      }
+      updateRangeSummary();
+      renderCalendar();
+    }
     return;
   }
 
