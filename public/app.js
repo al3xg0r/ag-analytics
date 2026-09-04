@@ -518,9 +518,15 @@ document.getElementById("form-customize").addEventListener("change", (e) => {
 });
 
 // ---------- custom range calendar ----------
+//
+// Classic range-picker interaction: the first click sets the start date,
+// the second sets the end (clicking before the current start just moves the
+// start there instead, rather than erroring). Once both are set, the very
+// next click starts a brand new range from scratch. One always-visible
+// calendar — no separate "From"/"To" fields, no popover positioning to get
+// wrong.
 
 let calendarState = {
-  openFor: null, // "start" | "end" | null
   viewMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   pickedStart: null,
   pickedEnd: null,
@@ -541,6 +547,16 @@ function sameDay(a, b) {
   return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+function updateRangeSummary() {
+  document.getElementById("range-summary-start").textContent = calendarState.pickedStart
+    ? formatDateDisplay(calendarState.pickedStart)
+    : "Pick start date";
+  document.getElementById("range-summary-end").textContent = calendarState.pickedEnd
+    ? formatDateDisplay(calendarState.pickedEnd)
+    : "Pick end date";
+  document.getElementById("btn-apply-custom-range").disabled = !(calendarState.pickedStart && calendarState.pickedEnd);
+}
+
 function renderCalendar() {
   const grid = document.getElementById("calendar-grid");
   const label = document.getElementById("calendar-month-label");
@@ -554,76 +570,49 @@ function renderCalendar() {
   const today = new Date();
   today.setHours(23, 59, 59, 999); // can't pick a date later than "end of today" — no future analytics data
 
-  const selected = calendarState.openFor === "end" ? calendarState.pickedEnd : calendarState.pickedStart;
-
   let html = "";
   for (let i = 0; i < 42; i++) {
     const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
     const isOutside = cellDate.getMonth() !== month;
     const isFuture = cellDate > today;
     const isToday = sameDay(cellDate, new Date());
-    const isSelected = sameDay(cellDate, selected);
+    const isStart = sameDay(cellDate, calendarState.pickedStart);
+    const isEnd = sameDay(cellDate, calendarState.pickedEnd);
+    const isInRange =
+      calendarState.pickedStart && calendarState.pickedEnd && cellDate > calendarState.pickedStart && cellDate < calendarState.pickedEnd;
     const classes = ["calendar-day"];
     if (isOutside) classes.push("calendar-day-outside");
     if (isToday) classes.push("calendar-day-today");
-    if (isSelected) classes.push("calendar-day-selected");
+    if (isInRange) classes.push("calendar-day-in-range");
+    if (isStart) classes.push("calendar-day-start");
+    if (isEnd) classes.push("calendar-day-end");
     html += `<button type="button" class="${classes.join(" ")}" data-date="${formatDateInput(cellDate)}" ${isFuture ? "disabled" : ""}>${cellDate.getDate()}</button>`;
   }
   grid.innerHTML = html;
 }
-
-function openCalendar(field) {
-  calendarState.openFor = field;
-  const reference = field === "end" ? calendarState.pickedEnd : calendarState.pickedStart;
-  calendarState.viewMonth = new Date((reference || new Date()).getFullYear(), (reference || new Date()).getMonth(), 1);
-  document.getElementById("calendar-popup").classList.remove("hidden");
-  renderCalendar();
-}
-
-function closeCalendar() {
-  calendarState.openFor = null;
-  document.getElementById("calendar-popup").classList.add("hidden");
-}
-
-document.querySelectorAll(".date-field").forEach((button) => {
-  button.addEventListener("click", () => {
-    const field = button.dataset.field;
-    if (calendarState.openFor === field) {
-      closeCalendar();
-    } else {
-      openCalendar(field);
-    }
-  });
-});
 
 document.getElementById("calendar-grid").addEventListener("click", (e) => {
   const dayButton = e.target.closest(".calendar-day");
   if (!dayButton || dayButton.disabled) return;
   const [y, m, d] = dayButton.dataset.date.split("-").map(Number);
   const picked = new Date(y, m - 1, d);
-  const errorEl = document.getElementById("custom-range-error");
-  errorEl.textContent = "";
 
-  if (calendarState.openFor === "start") {
+  const bothAlreadySet = calendarState.pickedStart && calendarState.pickedEnd;
+  if (!calendarState.pickedStart || bothAlreadySet) {
+    // Nothing picked yet, or a previous range was already complete — this
+    // click starts a fresh range.
     calendarState.pickedStart = picked;
-    document.getElementById("date-field-start-value").textContent = formatDateDisplay(picked);
-    // If start ends up after the already-picked end, clear end rather than
-    // silently submitting an invalid range.
-    if (calendarState.pickedEnd && calendarState.pickedStart > calendarState.pickedEnd) {
-      calendarState.pickedEnd = null;
-      document.getElementById("date-field-end-value").textContent = "Select date";
-    }
+    calendarState.pickedEnd = null;
+  } else if (picked < calendarState.pickedStart) {
+    // Clicked before the current start — move the start there instead of
+    // erroring, same as most range pickers.
+    calendarState.pickedStart = picked;
   } else {
-    if (calendarState.pickedStart && picked < calendarState.pickedStart) {
-      errorEl.textContent = "End date can't be before the start date.";
-      return;
-    }
     calendarState.pickedEnd = picked;
-    document.getElementById("date-field-end-value").textContent = formatDateDisplay(picked);
   }
 
-  document.getElementById("btn-apply-custom-range").disabled = !(calendarState.pickedStart && calendarState.pickedEnd);
-  closeCalendar();
+  updateRangeSummary();
+  renderCalendar();
 });
 
 document.getElementById("btn-cal-prev").addEventListener("click", () => {
@@ -634,14 +623,6 @@ document.getElementById("btn-cal-prev").addEventListener("click", () => {
 document.getElementById("btn-cal-next").addEventListener("click", () => {
   calendarState.viewMonth = new Date(calendarState.viewMonth.getFullYear(), calendarState.viewMonth.getMonth() + 1, 1);
   renderCalendar();
-});
-
-// Click-away closes the popup without discarding whatever was already picked
-document.addEventListener("click", (e) => {
-  if (calendarState.openFor === null) return;
-  const popup = document.getElementById("calendar-popup");
-  const isDateField = e.target.closest(".date-field");
-  if (!popup.contains(e.target) && !isDateField) closeCalendar();
 });
 
 // ---------- period selector ----------
@@ -658,8 +639,9 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
     // showing whatever period was active before, unchanged, until the user
     // actually picks both dates and clicks Apply. Nothing here should
     // silently switch what the panels are showing.
+    const wasHidden = customRangeForm.classList.contains("hidden");
     customRangeForm.classList.remove("hidden");
-    closeCalendar();
+    if (wasHidden) renderCalendar(); // first time opening — draw the current month
     return;
   }
 
@@ -667,7 +649,6 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
   button.classList.add("active");
   state.currentPeriod = button.dataset.period;
   customRangeForm.classList.add("hidden");
-  closeCalendar();
   closeMobileMenu();
   await refreshAll();
 });

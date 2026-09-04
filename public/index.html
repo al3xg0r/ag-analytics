@@ -79,28 +79,20 @@
           <button data-period="custom">Custom range</button>
         </div>
         <form id="form-custom-range" class="custom-range hidden">
-          <div class="date-field-row">
-            <button type="button" class="date-field" data-field="start">
-              <span class="date-field-label">From</span>
-              <span class="date-field-value" id="date-field-start-value">Select date</span>
-            </button>
-            <button type="button" class="date-field" data-field="end">
-              <span class="date-field-label">To</span>
-              <span class="date-field-value" id="date-field-end-value">Select date</span>
-            </button>
+          <div class="range-summary">
+            <span id="range-summary-start">Pick start date</span>
+            <span class="range-summary-arrow">→</span>
+            <span id="range-summary-end">Pick end date</span>
           </div>
-          <div id="calendar-popup" class="calendar-popup hidden">
-            <div class="calendar-header">
-              <button type="button" id="btn-cal-prev" class="btn-ghost small" aria-label="Previous month">‹</button>
-              <span id="calendar-month-label"></span>
-              <button type="button" id="btn-cal-next" class="btn-ghost small" aria-label="Next month">›</button>
-            </div>
-            <div class="calendar-weekdays">
-              <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
-            </div>
-            <div class="calendar-grid" id="calendar-grid"></div>
+          <div class="calendar-header">
+            <button type="button" id="btn-cal-prev" class="btn-ghost small" aria-label="Previous month">‹</button>
+            <span id="calendar-month-label"></span>
+            <button type="button" id="btn-cal-next" class="btn-ghost small" aria-label="Next month">›</button>
           </div>
-          <p id="custom-range-error" class="form-error"></p>
+          <div class="calendar-weekdays">
+            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
           <button type="submit" class="btn-primary small full-width" id="btn-apply-custom-range" disabled>Apply</button>
         </form>
       </div>

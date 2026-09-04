@@ -243,62 +243,30 @@ form > button[type="submit"] {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 9px;
-  position: relative;
 }
 
-.date-field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.date-field {
+.range-summary {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 8px 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 6px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
-  text-align: left;
-  transition: border-color 0.15s;
-}
-
-.date-field:hover { border-color: var(--accent); }
-
-.date-field-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-muted);
 }
 
-.date-field-value {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text);
-}
-
-.calendar-popup {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 6px;
-  z-index: 40;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  padding: 12px;
-}
+.range-summary span:not(.range-summary-arrow) { color: var(--text); }
+.range-summary-arrow { color: var(--text-muted); opacity: 0.6; }
 
 .calendar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-top: 2px;
 }
 
 .calendar-header button { padding: 4px 8px; }
@@ -348,7 +316,13 @@ form > button[type="submit"] {
 
 .calendar-day-today { box-shadow: inset 0 0 0 1px var(--accent); }
 
-.calendar-day-selected {
+/* The two endpoints of the picked range get a solid fill; the days strictly
+   between them get a soft tint, so the whole span reads as one connected
+   range at a glance rather than two disconnected highlighted days. */
+.calendar-day-in-range { background: var(--accent-soft); border-radius: 0; }
+
+.calendar-day-start,
+.calendar-day-end {
   background: var(--accent) !important;
   color: var(--accent-contrast) !important;
   font-weight: 600;
