@@ -517,44 +517,171 @@ document.getElementById("form-customize").addEventListener("change", (e) => {
   applyVisiblePanels();
 });
 
+// ---------- custom range calendar ----------
+
+let calendarState = {
+  openFor: null, // "start" | "end" | null
+  viewMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  pickedStart: null,
+  pickedEnd: null,
+};
+
+function formatDateInput(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function formatDateDisplay(date) {
+  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function sameDay(a, b) {
+  return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function renderCalendar() {
+  const grid = document.getElementById("calendar-grid");
+  const label = document.getElementById("calendar-month-label");
+  const year = calendarState.viewMonth.getFullYear();
+  const month = calendarState.viewMonth.getMonth();
+  label.textContent = calendarState.viewMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+
+  const firstOfMonth = new Date(year, month, 1);
+  const startOffset = firstOfMonth.getDay(); // 0 = Sunday, matches the Su-Sa header
+  const gridStart = new Date(year, month, 1 - startOffset);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999); // can't pick a date later than "end of today" — no future analytics data
+
+  const selected = calendarState.openFor === "end" ? calendarState.pickedEnd : calendarState.pickedStart;
+
+  let html = "";
+  for (let i = 0; i < 42; i++) {
+    const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+    const isOutside = cellDate.getMonth() !== month;
+    const isFuture = cellDate > today;
+    const isToday = sameDay(cellDate, new Date());
+    const isSelected = sameDay(cellDate, selected);
+    const classes = ["calendar-day"];
+    if (isOutside) classes.push("calendar-day-outside");
+    if (isToday) classes.push("calendar-day-today");
+    if (isSelected) classes.push("calendar-day-selected");
+    html += `<button type="button" class="${classes.join(" ")}" data-date="${formatDateInput(cellDate)}" ${isFuture ? "disabled" : ""}>${cellDate.getDate()}</button>`;
+  }
+  grid.innerHTML = html;
+}
+
+function openCalendar(field) {
+  calendarState.openFor = field;
+  const reference = field === "end" ? calendarState.pickedEnd : calendarState.pickedStart;
+  calendarState.viewMonth = new Date((reference || new Date()).getFullYear(), (reference || new Date()).getMonth(), 1);
+  document.getElementById("calendar-popup").classList.remove("hidden");
+  renderCalendar();
+}
+
+function closeCalendar() {
+  calendarState.openFor = null;
+  document.getElementById("calendar-popup").classList.add("hidden");
+}
+
+document.querySelectorAll(".date-field").forEach((button) => {
+  button.addEventListener("click", () => {
+    const field = button.dataset.field;
+    if (calendarState.openFor === field) {
+      closeCalendar();
+    } else {
+      openCalendar(field);
+    }
+  });
+});
+
+document.getElementById("calendar-grid").addEventListener("click", (e) => {
+  const dayButton = e.target.closest(".calendar-day");
+  if (!dayButton || dayButton.disabled) return;
+  const [y, m, d] = dayButton.dataset.date.split("-").map(Number);
+  const picked = new Date(y, m - 1, d);
+  const errorEl = document.getElementById("custom-range-error");
+  errorEl.textContent = "";
+
+  if (calendarState.openFor === "start") {
+    calendarState.pickedStart = picked;
+    document.getElementById("date-field-start-value").textContent = formatDateDisplay(picked);
+    // If start ends up after the already-picked end, clear end rather than
+    // silently submitting an invalid range.
+    if (calendarState.pickedEnd && calendarState.pickedStart > calendarState.pickedEnd) {
+      calendarState.pickedEnd = null;
+      document.getElementById("date-field-end-value").textContent = "Select date";
+    }
+  } else {
+    if (calendarState.pickedStart && picked < calendarState.pickedStart) {
+      errorEl.textContent = "End date can't be before the start date.";
+      return;
+    }
+    calendarState.pickedEnd = picked;
+    document.getElementById("date-field-end-value").textContent = formatDateDisplay(picked);
+  }
+
+  document.getElementById("btn-apply-custom-range").disabled = !(calendarState.pickedStart && calendarState.pickedEnd);
+  closeCalendar();
+});
+
+document.getElementById("btn-cal-prev").addEventListener("click", () => {
+  calendarState.viewMonth = new Date(calendarState.viewMonth.getFullYear(), calendarState.viewMonth.getMonth() - 1, 1);
+  renderCalendar();
+});
+
+document.getElementById("btn-cal-next").addEventListener("click", () => {
+  calendarState.viewMonth = new Date(calendarState.viewMonth.getFullYear(), calendarState.viewMonth.getMonth() + 1, 1);
+  renderCalendar();
+});
+
+// Click-away closes the popup without discarding whatever was already picked
+document.addEventListener("click", (e) => {
+  if (calendarState.openFor === null) return;
+  const popup = document.getElementById("calendar-popup");
+  const isDateField = e.target.closest(".date-field");
+  if (!popup.contains(e.target) && !isDateField) closeCalendar();
+});
+
 // ---------- period selector ----------
 
 document.getElementById("period-tabs").addEventListener("click", async (e) => {
   const button = e.target.closest("button[data-period]");
   if (!button) return;
+
+  const customRangeForm = document.getElementById("form-custom-range");
+
+  if (button.dataset.period === "custom") {
+    // Reveal the picker but deliberately do NOT touch state.currentPeriod,
+    // the "active" tab, or trigger a refresh yet — the dashboard keeps
+    // showing whatever period was active before, unchanged, until the user
+    // actually picks both dates and clicks Apply. Nothing here should
+    // silently switch what the panels are showing.
+    customRangeForm.classList.remove("hidden");
+    closeCalendar();
+    return;
+  }
+
   document.querySelectorAll("#period-tabs button").forEach((b) => b.classList.remove("active"));
   button.classList.add("active");
   state.currentPeriod = button.dataset.period;
+  customRangeForm.classList.add("hidden");
+  closeCalendar();
   closeMobileMenu();
-
-  const customRangeForm = document.getElementById("form-custom-range");
-  if (state.currentPeriod === "custom") {
-    // Pre-fill with a sensible default (the last 7 days) so clicking the tab
-    // immediately shows *something*, exactly like every other period tab —
-    // the date inputs are then just there to narrow it down further.
-    if (!state.customRange) {
-      const today = new Date();
-      const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
-      const toDateInput = (d) => d.toISOString().slice(0, 10);
-      state.customRange = { start: toDateInput(weekAgo), end: toDateInput(today) };
-      customRangeForm.start.value = state.customRange.start;
-      customRangeForm.end.value = state.customRange.end;
-    }
-    customRangeForm.classList.remove("hidden");
-  } else {
-    customRangeForm.classList.add("hidden");
-  }
-
   await refreshAll();
 });
 
 document.getElementById("form-custom-range").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const form = new FormData(e.target);
-  const start = form.get("start");
-  const end = form.get("end");
-  if (!start || !end || start > end) return; // native date inputs already block most of this, but stay safe
-  state.customRange = { start, end };
+  if (!calendarState.pickedStart || !calendarState.pickedEnd) return;
+  document.querySelectorAll("#period-tabs button").forEach((b) => b.classList.remove("active"));
+  document.querySelector('#period-tabs button[data-period="custom"]').classList.add("active");
+  state.currentPeriod = "custom";
+  state.customRange = {
+    start: formatDateInput(calendarState.pickedStart),
+    end: formatDateInput(calendarState.pickedEnd),
+  };
   closeMobileMenu();
   await refreshAll();
 });
