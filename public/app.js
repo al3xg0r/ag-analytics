@@ -268,12 +268,27 @@ function closeMobileMenu() {
 document.getElementById("btn-mobile-menu").addEventListener("click", openMobileMenu);
 document.getElementById("sidebar-overlay").addEventListener("click", closeMobileMenu);
 
+// Resets the period selector back to "Today" — used when switching sites,
+// so a period picked while looking at one site doesn't silently carry over
+// and apply to a completely different site's data.
+function resetPeriodToToday() {
+  state.currentPeriod = "today";
+  state.customRange = null;
+  document.querySelectorAll("#period-tabs button").forEach((b) => b.classList.remove("active"));
+  document.querySelector('#period-tabs button[data-period="today"]').classList.add("active");
+  document.getElementById("form-custom-range").classList.add("hidden");
+  calendarState.pickedStart = null;
+  calendarState.pickedEnd = null;
+  calendarState.viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+}
+
 document.getElementById("site-select").addEventListener("change", async (e) => {
   state.currentSiteId = e.target.value;
   localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   const site = state.sites.find((s) => s.id === state.currentSiteId);
   document.getElementById("site-name-text").textContent = site ? site.name : "—";
   updateSiteFavicon(site);
+  resetPeriodToToday();
   closeMobileMenu();
   await refreshAll();
 });
@@ -634,11 +649,16 @@ document.getElementById("period-tabs").addEventListener("click", async (e) => {
   const customRangeForm = document.getElementById("form-custom-range");
 
   if (button.dataset.period === "custom") {
-    // Reveal the picker but deliberately do NOT touch state.currentPeriod,
-    // the "active" tab, or trigger a refresh yet — the dashboard keeps
-    // showing whatever period was active before, unchanged, until the user
-    // actually picks both dates and clicks Apply. Nothing here should
-    // silently switch what the panels are showing.
+    // Note: this moves the "active" highlight to Custom range immediately
+    // (purely visual — "you're now working in this picker"), but does NOT
+    // touch state.currentPeriod or refresh any panel data. The dashboard
+    // keeps showing whatever period was actually applied before, unchanged,
+    // until Apply is clicked — the highlighted tab and the displayed data
+    // are deliberately allowed to disagree for the brief moment you're
+    // mid-pick, same as most date-range pickers.
+    document.querySelectorAll("#period-tabs button").forEach((b) => b.classList.remove("active"));
+    button.classList.add("active");
+
     const wasHidden = customRangeForm.classList.contains("hidden");
     customRangeForm.classList.remove("hidden");
     if (wasHidden) {
