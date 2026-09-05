@@ -210,8 +210,6 @@ function updateSiteFavicon(site) {
 async function loadSites() {
   const { sites } = await api("/sites");
   state.sites = sites;
-  const select = document.getElementById("site-select");
-  select.innerHTML = sites.map((s) => `<option value="${s.id}">${s.name}</option>`).join("");
 
   const deleteButton = document.getElementById("btn-delete-site");
   const codeButton = document.getElementById("btn-view-code");
@@ -221,6 +219,8 @@ async function loadSites() {
     state.currentSiteId = null;
     localStorage.removeItem(CURRENT_SITE_KEY);
     document.getElementById("site-name-text").textContent = "No sites yet";
+    document.getElementById("site-picker-current").textContent = "No sites yet";
+    document.getElementById("site-picker-list").innerHTML = "";
     updateSiteFavicon(null);
     deleteButton.disabled = true;
     codeButton.disabled = true;
@@ -240,11 +240,48 @@ async function loadSites() {
   const stillExists = state.currentSiteId && sites.some((s) => s.id === state.currentSiteId);
   state.currentSiteId = stillExists ? state.currentSiteId : sites[0].id;
   localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
-  select.value = state.currentSiteId;
   const current = sites.find((s) => s.id === state.currentSiteId);
   document.getElementById("site-name-text").textContent = current ? current.name : "—";
+  document.getElementById("site-picker-current").textContent = current ? current.name : "—";
   updateSiteFavicon(current);
+  renderSitePickerList();
 }
+
+// Custom dropdown replacing a native <select> — a plain <select>'s built-in
+// OS-rendered popup turned out to have a real, reproducible bug on some
+// platforms (a click on an option could get lost and silently reselect the
+// first item instead). Rendering our own list sidesteps that entirely,
+// since we control every click ourselves, and lets it match the rest of
+// the sidebar's design instead of looking like a bare system control.
+function renderSitePickerList() {
+  const list = document.getElementById("site-picker-list");
+  list.innerHTML = state.sites
+    .map((site) => {
+      const activeClass = site.id === state.currentSiteId ? " active" : "";
+      return `<button type="button" class="site-picker-option${activeClass}" data-site-id="${site.id}">${site.name}</button>`;
+    })
+    .join("");
+}
+
+function closeSitePicker() {
+  document.getElementById("site-picker-list").classList.add("hidden");
+}
+
+document.getElementById("site-picker-button").addEventListener("click", () => {
+  document.getElementById("site-picker-list").classList.toggle("hidden");
+});
+
+document.getElementById("site-picker-list").addEventListener("click", async (e) => {
+  const option = e.target.closest(".site-picker-option");
+  if (!option) return;
+  closeSitePicker();
+  await switchSite(option.dataset.siteId);
+});
+
+// Click-away closes the list without affecting the current selection
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".site-picker")) closeSitePicker();
+});
 
 // Hides the stat cards / chart / breakdown tables when there is nothing to show yet
 function setContentVisible(visible) {
@@ -282,16 +319,18 @@ function resetPeriodToToday() {
   calendarState.viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 }
 
-document.getElementById("site-select").addEventListener("change", async (e) => {
-  state.currentSiteId = e.target.value;
+async function switchSite(siteId) {
+  state.currentSiteId = siteId;
   localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   const site = state.sites.find((s) => s.id === state.currentSiteId);
   document.getElementById("site-name-text").textContent = site ? site.name : "—";
+  document.getElementById("site-picker-current").textContent = site ? site.name : "—";
   updateSiteFavicon(site);
+  renderSitePickerList();
   resetPeriodToToday();
   closeMobileMenu();
   await refreshAll();
-});
+}
 
 document.getElementById("btn-refresh").addEventListener("click", async () => {
   const button = document.getElementById("btn-refresh");
