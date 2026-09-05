@@ -292,5 +292,12 @@
   </div>
 
   <script src="/app.js"></script>
+  <!-- AG Analytics tracking its own dashboard traffic. Relative src on
+       purpose (no hardcoded domain) — keeps working automatically through
+       any future custom-domain change, same as the snippet generated for
+       any other tracked site. Only logged-in admins can view this data
+       (every dashboard API route requires an auth token); anyone loading
+       this page is tracked the same as on any other site using the widget. -->
+  <script defer src="/widget.js" data-site="ag-analytics-dashboard-xygf"></script>
 </body>
 </html>
