@@ -361,7 +361,6 @@ document.getElementById("form-add-site").addEventListener("submit", async (e) =>
     body: JSON.stringify({
       name: form.get("name"),
       domain: form.get("domain"),
-      description: form.get("description") || undefined,
     }),
   });
   document.getElementById("new-site-snippet").textContent = site.tracking_snippet;
@@ -432,6 +431,7 @@ document.getElementById("btn-edit-domain").addEventListener("click", () => {
   const site = state.sites.find((s) => s.id === state.currentSiteId);
   const form = document.getElementById("form-edit-domain");
   form.reset();
+  form.name.value = site ? site.name : "";
   form.domain.value = site ? site.domain : "";
   document.getElementById("edit-domain-error").textContent = "";
   show("modal-edit-domain");
@@ -450,7 +450,7 @@ document.getElementById("form-edit-domain").addEventListener("submit", async (e)
   try {
     await api(`/sites/${state.currentSiteId}`, {
       method: "PATCH",
-      body: JSON.stringify({ domain: form.get("domain") }),
+      body: JSON.stringify({ name: form.get("name"), domain: form.get("domain") }),
     });
     hide("modal-edit-domain");
     await loadSites();
