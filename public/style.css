@@ -255,7 +255,14 @@ form > button[type="submit"] {
   font-family: var(--font-mono);
   font-size: 13px;
   text-align: left;
+  cursor: grab;
+  border: 1px solid transparent;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
 }
+
+.site-picker-option:active { cursor: grabbing; }
+.site-picker-option.dragging { opacity: 0.4; }
+.site-picker-option.drag-over { border-color: var(--accent); }
 
 .site-picker-option:hover { background: var(--accent-soft); }
 .site-picker-option.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }

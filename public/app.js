@@ -7,6 +7,7 @@ const TOKEN_KEY = "ag_admin_token";
 const THEME_KEY = "ag_theme";
 const PANELS_KEY = "ag_visible_panels";
 const PANEL_ORDER_KEY = "ag_panel_order";
+const SITE_ORDER_KEY = "ag_site_order";
 const CURRENT_SITE_KEY = "ag_current_site";
 const ALL_PANELS = ["pages", "referrers", "search-engines", "search-queries", "campaigns", "countries", "browsers", "os", "devices", "events", "bots"];
 
@@ -253,14 +254,69 @@ async function loadSites() {
 // first item instead). Rendering our own list sidesteps that entirely,
 // since we control every click ourselves, and lets it match the rest of
 // the sidebar's design instead of looking like a bare system control.
+// Reads the saved site order from this browser. Falls back to whatever
+// order the API returned (server's created_at DESC) for any sites not
+// present in the stored order — new sites just land at the end instead of
+// disappearing.
+function getOrderedSites() {
+  let storedOrder = [];
+  try {
+    const stored = JSON.parse(localStorage.getItem(SITE_ORDER_KEY));
+    if (Array.isArray(stored)) storedOrder = stored;
+  } catch {
+    // fall through to server order
+  }
+  const byId = Object.fromEntries(state.sites.map((s) => [s.id, s]));
+  const ordered = storedOrder.filter((id) => byId[id]).map((id) => byId[id]);
+  const remaining = state.sites.filter((s) => !storedOrder.includes(s.id));
+  return [...ordered, ...remaining];
+}
+
 function renderSitePickerList() {
   const list = document.getElementById("site-picker-list");
-  list.innerHTML = state.sites
+  list.innerHTML = getOrderedSites()
     .map((site) => {
       const activeClass = site.id === state.currentSiteId ? " active" : "";
-      return `<button type="button" class="site-picker-option${activeClass}" data-site-id="${site.id}">${site.name}</button>`;
+      return `<button type="button" class="site-picker-option${activeClass}" data-site-id="${site.id}" draggable="true">${site.name}</button>`;
     })
     .join("");
+  initSitePickerDragAndDrop();
+}
+
+let siteDragSource = null;
+
+// Drag-and-drop reordering of the site list, saved per browser — same
+// pattern already used for the breakdown panels below. No separate "handle"
+// needed here (unlike the panel titles): these are plain buttons with no
+// selectable text inside them, so the whole row can be picked up safely.
+function initSitePickerDragAndDrop() {
+  const list = document.getElementById("site-picker-list");
+  list.querySelectorAll(".site-picker-option").forEach((option) => {
+    option.addEventListener("dragstart", () => {
+      siteDragSource = option;
+      option.classList.add("dragging");
+    });
+
+    option.addEventListener("dragend", () => {
+      option.classList.remove("dragging");
+      siteDragSource = null;
+      list.querySelectorAll(".site-picker-option").forEach((o) => o.classList.remove("drag-over"));
+      const order = Array.from(list.querySelectorAll(".site-picker-option")).map((o) => o.dataset.siteId);
+      localStorage.setItem(SITE_ORDER_KEY, JSON.stringify(order));
+    });
+
+    option.addEventListener("dragover", (e) => {
+      e.preventDefault(); // required to allow dropping
+      if (!siteDragSource || siteDragSource === option) return;
+      option.classList.add("drag-over");
+      const rect = option.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      list.insertBefore(siteDragSource, before ? option : option.nextSibling);
+    });
+
+    option.addEventListener("dragleave", () => option.classList.remove("drag-over"));
+    option.addEventListener("drop", (e) => e.preventDefault());
+  });
 }
 
 function closeSitePicker() {
