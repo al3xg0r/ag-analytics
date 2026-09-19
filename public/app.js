@@ -1114,7 +1114,11 @@ function countryName(code) {
   if (code === "T1") return "Tor network";
   if (code === "XX") return "Unknown";
   try {
-    return new Intl.DisplayNames([navigator.language || "en"], { type: "region" }).of(code.toUpperCase());
+    // Deliberately hardcoded to "en", not navigator.language — the rest of
+    // this dashboard's UI is English regardless of the admin's own browser
+    // language, so country names should be too, rather than randomly
+    // switching to whatever locale the viewer's browser happens to be set to.
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase());
   } catch {
     return code;
   }
