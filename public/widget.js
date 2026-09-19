@@ -108,10 +108,37 @@
     });
   };
 
-  trackPageView();
-  // 45s heartbeat: frequent enough for the "online now" indicator to feel
-  // live, spaced out enough to stay comfortably inside free-tier database quotas.
-  setInterval(trackHeartbeat, 45000);
+  // Chrome's speculative prerendering (the Speculation Rules API, and its
+  // older NoState Prefetch predecessor) can fully render a page — running
+  // every script on it, including this one — in the background before the
+  // user ever clicks the link, on the bet that they probably will. If a
+  // page has several outbound/internal links flagged as prerender
+  // candidates, EACH one silently executes this entire script once, and
+  // each looked like a genuine, separate visit — explaining counts that
+  // don't match how many times a page was actually, visibly opened.
+  // document.prerendering (or the older visibilityState check, for
+  // browsers before it existed) is how a page tells whether it's currently
+  // just a speculative background render rather than one the user is
+  // actually looking at; tracking is deferred until it's promoted to a
+  // real, user-visible page via the prerenderingchange event — a
+  // pre-rendered page that's never actually activated by the user (most
+  // prerender candidates aren't) never fires a pageview at all.
+  function isPrerendering() {
+    return document.prerendering === true || document.visibilityState === "prerender";
+  }
+
+  function startTracking() {
+    trackPageView();
+    // 45s heartbeat: frequent enough for the "online now" indicator to feel
+    // live, spaced out enough to stay comfortably inside free-tier database quotas.
+    setInterval(trackHeartbeat, 45000);
+  }
+
+  if (isPrerendering()) {
+    document.addEventListener("prerenderingchange", startTracking, { once: true });
+  } else {
+    startTracking();
+  }
 
   // Single Page Apps: catch client-side navigation via the History API
   // instead of watching the whole DOM for mutations. A MutationObserver on

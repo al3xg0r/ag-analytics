@@ -5,6 +5,8 @@ Lightweight • Privacy-first • Serverless • Multi-site web analytics, built
 No VPS. No Docker. No PHP. No MySQL. No Google Analytics. No cookies.
 Just a Cloudflare Worker and a D1 database — nothing else to provision.
 
+![AG Analytics dashboard](docs/screenshot.png)
+
 ---
 
 ## 1. What this project is
