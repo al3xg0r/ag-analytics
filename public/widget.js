@@ -100,13 +100,40 @@
   // live, spaced out enough to stay comfortably inside free-tier database quotas.
   setInterval(trackHeartbeat, 45000);
 
-  // Single Page Apps: catch client-side navigation without a full page reload
+  // Single Page Apps: catch client-side navigation via the History API
+  // instead of watching the whole DOM for mutations. A MutationObserver on
+  // `document` fires on ANY DOM change anywhere on the page — a cookie
+  // banner appending a hash, a share widget adjusting query params via
+  // replaceState, a router normalizing the URL a few times during its own
+  // startup — and each one looked identical to a brand new pageview,
+  // inflating referrer counts for what was really a single visit. Hooking
+  // pushState/replaceState/popstate directly ties tracking to actual
+  // navigation calls instead of an indirect side effect, and the short
+  // debounce collapses any still-rapid, same-visit URL changes (e.g. a
+  // router doing 2-3 quick replaceState calls while it boots) into one
+  // pageview instead of several.
   var lastUrl = location.href;
-  var observer = new MutationObserver(function () {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      trackPageView();
-    }
-  });
-  observer.observe(document, { subtree: true, childList: true });
+  var debounceTimer = null;
+
+  function handleUrlChange() {
+    if (location.href === lastUrl) return;
+    lastUrl = location.href;
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(trackPageView, 50);
+  }
+
+  var originalPushState = history.pushState;
+  history.pushState = function () {
+    originalPushState.apply(history, arguments);
+    handleUrlChange();
+  };
+
+  var originalReplaceState = history.replaceState;
+  history.replaceState = function () {
+    originalReplaceState.apply(history, arguments);
+    handleUrlChange();
+  };
+
+  window.addEventListener("popstate", handleUrlChange);
+  window.addEventListener("hashchange", handleUrlChange);
 })();
