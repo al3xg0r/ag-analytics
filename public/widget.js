@@ -13,6 +13,19 @@
   var site = scriptTag.getAttribute("data-site");
   if (!site) return;
 
+  // Guards against this script somehow running more than once for the same
+  // site on the same page — e.g. a framework component (React/Vue/Next.js)
+  // that re-injects the <script> tag on every render or remount, a common
+  // pattern when a third-party script is embedded without a dedupe check,
+  // instead of once statically in the page HTML. Without this, each
+  // duplicate run independently fires its own pageview AND wraps
+  // history.pushState/replaceState again on top of the previous wrapper —
+  // compounding the problem further with every re-render, not just doubling
+  // it once.
+  window.__agAnalyticsInit = window.__agAnalyticsInit || {};
+  if (window.__agAnalyticsInit[site]) return;
+  window.__agAnalyticsInit[site] = true;
+
   var endpoint = new URL(scriptTag.src).origin;
   var sessionKey = "ag_session_" + site;
   var sessionId = sessionStorageGet(sessionKey);
