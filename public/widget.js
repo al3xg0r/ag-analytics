@@ -72,7 +72,21 @@
     });
   }
 
+  var lastTrackedAt = 0;
+  var MIN_PAGEVIEW_INTERVAL_MS = 1000;
+
   function trackPageView() {
+    // Hard safety net, on top of the more targeted fixes above (History
+    // API hooks, the duplicate-init guard, the prerendering check, the
+    // trailing-slash normalization): whatever the exact cause, two
+    // pageviews within one second of each other are never both real — a
+    // person can't navigate that fast. This blocks any remaining or future
+    // duplicate-trigger path unconditionally, without needing to know what
+    // caused it.
+    var now = Date.now();
+    if (now - lastTrackedAt < MIN_PAGEVIEW_INTERVAL_MS) return;
+    lastTrackedAt = now;
+
     send("/event", {
       site: site,
       sessionId: sessionId,
