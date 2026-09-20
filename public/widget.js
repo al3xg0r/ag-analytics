@@ -155,8 +155,20 @@
   var lastUrl = location.href;
   var debounceTimer = null;
 
+  // Ignores a trailing-slash-only difference when deciding whether the URL
+  // "really" changed. Frameworks that enforce URL trailing-slash
+  // conventions (Next.js among them) can silently call replaceState once,
+  // shortly after hydration, purely to normalize `/page` to `/page/` (or
+  // vice versa) — a real location.href change, but not a genuinely new
+  // page from the visitor's perspective. Without this, that single
+  // normalization looked like a second pageview a few milliseconds after
+  // the first, both attributed to the same original referrer.
+  function normalizeForComparison(url) {
+    return url.replace(/\/$/, "");
+  }
+
   function handleUrlChange() {
-    if (location.href === lastUrl) return;
+    if (normalizeForComparison(location.href) === normalizeForComparison(lastUrl)) return;
     lastUrl = location.href;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(trackPageView, 50);
