@@ -75,6 +75,16 @@
   var lastTrackedAt = 0;
   var MIN_PAGEVIEW_INTERVAL_MS = 1000;
 
+  // Brave deliberately makes its User-Agent identical to Chrome's (an
+  // anti-fingerprinting measure), so it can never be reliably detected from
+  // the server side by parsing the UA string alone — the only real signal
+  // is this client-side API, which only exists in Brave. Resolved once and
+  // cached, then sent along with every event so the backend can use it
+  // instead of guessing from the UA.
+  var bravePromise = window.navigator.brave && typeof window.navigator.brave.isBrave === "function"
+    ? window.navigator.brave.isBrave().catch(function () { return false; })
+    : Promise.resolve(false);
+
   function trackPageView() {
     // Hard safety net, on top of the more targeted fixes above (History
     // API hooks, the duplicate-init guard, the prerendering check, the
@@ -87,15 +97,18 @@
     if (now - lastTrackedAt < MIN_PAGEVIEW_INTERVAL_MS) return;
     lastTrackedAt = now;
 
-    send("/event", {
-      site: site,
-      sessionId: sessionId,
-      url: location.href,
-      title: document.title,
-      referrer: document.referrer || null,
-      screen: screen.width + "x" + screen.height,
-      language: navigator.language,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    bravePromise.then(function (isBrave) {
+      send("/event", {
+        site: site,
+        sessionId: sessionId,
+        url: location.href,
+        title: document.title,
+        referrer: document.referrer || null,
+        screen: screen.width + "x" + screen.height,
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        browserOverride: isBrave ? "Brave" : null,
+      });
     });
   }
 

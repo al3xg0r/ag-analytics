@@ -18,9 +18,10 @@ const ALL_PANELS = ["pages", "referrers", "search-engines", "search-queries", "c
 // opening a cached copy to check it, or someone hitting Save As and opening
 // it offline). It's tracked separately from real page views on purpose, see
 // collect.js for the full reasoning.
-const EVENT_LABELS = {
-  non_web_request: "Non-page request (e.g. a locally opened copy of the site)",
-};
+function eventLabel(name) {
+  if (name === "non_web_request") return t("event_label_non_web_request");
+  return name;
+}
 
 let state = {
   sites: [],
@@ -100,6 +101,8 @@ function formatSeconds(totalSeconds) {
 
 async function boot() {
   applyStoredTheme();
+  applyTranslations();
+  updateLangPickerLabel();
 
   const status = await api("/auth/status").catch(() => null);
   renderVersionTag(status);
@@ -192,20 +195,69 @@ document.getElementById("btn-theme").addEventListener("click", () => {
   localStorage.setItem(THEME_KEY, next);
 });
 
+// ---------- language ----------
+
+function updateLangPickerLabel() {
+  document.getElementById("lang-picker-current").textContent = getLanguage().toUpperCase();
+  document.querySelectorAll(".lang-picker-option").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.lang === getLanguage());
+  });
+}
+
+document.getElementById("lang-picker-button").addEventListener("click", () => {
+  document.getElementById("lang-picker-list").classList.toggle("hidden");
+});
+
+document.getElementById("lang-picker-list").addEventListener("click", async (e) => {
+  const option = e.target.closest(".lang-picker-option");
+  if (!option) return;
+  setLanguage(option.dataset.lang);
+  updateLangPickerLabel();
+  document.getElementById("lang-picker-list").classList.add("hidden");
+  // Re-render anything already on screen whose text was generated in JS
+  // (empty/error states, deltas, event labels, country names, calendar
+  // month) rather than set via data-i18n, so switching language updates
+  // everything immediately, not just the static chrome.
+  if (state.currentSiteId) await refreshAll();
+  if (!document.getElementById("form-custom-range").classList.contains("hidden")) renderCalendar();
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".lang-picker")) document.getElementById("lang-picker-list").classList.add("hidden");
+});
+
 // ---------- sites ----------
 
-// Shows the site's favicon next to its name in the header, fetched via
 // Google's favicon service so we never have to store or proxy the image
 // ourselves (and it still works for sites without a /favicon.ico).
+function cleanDomain(domain) {
+  return domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "");
+}
+
 function updateSiteFavicon(site) {
   const img = document.getElementById("site-favicon");
   if (!site) {
     img.classList.add("hidden");
     return;
   }
-  const cleanDomain = site.domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "");
-  img.src = `https://www.google.com/s2/favicons?domain=${cleanDomain}&sz=64`;
+  img.src = `https://www.google.com/s2/favicons?domain=${cleanDomain(site.domain)}&sz=64`;
   img.classList.remove("hidden");
+}
+
+// Updates both the visible site name and the link it points to (the site's
+// own homepage) in one place, so the two never drift out of sync.
+function updateSiteNameLink(site) {
+  const link = document.getElementById("site-name-text");
+  const picker = document.getElementById("site-picker-current");
+  if (!site) {
+    link.textContent = "No sites yet";
+    link.removeAttribute("href");
+    picker.textContent = "No sites yet";
+    return;
+  }
+  link.textContent = site.name;
+  link.href = `https://${cleanDomain(site.domain)}`;
+  picker.textContent = site.name;
 }
 
 async function loadSites() {
@@ -219,8 +271,7 @@ async function loadSites() {
   if (sites.length === 0) {
     state.currentSiteId = null;
     localStorage.removeItem(CURRENT_SITE_KEY);
-    document.getElementById("site-name-text").textContent = "No sites yet";
-    document.getElementById("site-picker-current").textContent = "No sites yet";
+    updateSiteNameLink(null);
     document.getElementById("site-picker-list").innerHTML = "";
     updateSiteFavicon(null);
     deleteButton.disabled = true;
@@ -242,8 +293,7 @@ async function loadSites() {
   state.currentSiteId = stillExists ? state.currentSiteId : sites[0].id;
   localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   const current = sites.find((s) => s.id === state.currentSiteId);
-  document.getElementById("site-name-text").textContent = current ? current.name : "—";
-  document.getElementById("site-picker-current").textContent = current ? current.name : "—";
+  updateSiteNameLink(current);
   updateSiteFavicon(current);
   renderSitePickerList();
 }
@@ -379,8 +429,7 @@ async function switchSite(siteId) {
   state.currentSiteId = siteId;
   localStorage.setItem(CURRENT_SITE_KEY, state.currentSiteId);
   const site = state.sites.find((s) => s.id === state.currentSiteId);
-  document.getElementById("site-name-text").textContent = site ? site.name : "—";
-  document.getElementById("site-picker-current").textContent = site ? site.name : "—";
+  updateSiteNameLink(site);
   updateSiteFavicon(site);
   renderSitePickerList();
   resetPeriodToToday();
@@ -437,9 +486,7 @@ document.getElementById("btn-delete-site").addEventListener("click", async () =>
 
   // A native confirm() is deliberately used here: deleting a site permanently
   // removes all of its visits, so an accidental click must not be one click away.
-  const confirmed = window.confirm(
-    `Delete "${siteName}"? This permanently removes all of its collected analytics data. This cannot be undone.`
-  );
+  const confirmed = window.confirm(t("confirm_delete_site").replace("%NAME%", siteName));
   if (!confirmed) return;
 
   await api(`/sites/${state.currentSiteId}`, { method: "DELETE" });
@@ -472,7 +519,7 @@ document.getElementById("btn-copy-code").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(text);
     const original = button.textContent;
-    button.textContent = "Copied!";
+    button.textContent = t("copied");
     setTimeout(() => (button.textContent = original), 1500);
   } catch {
     // Clipboard API can be blocked (permissions, insecure context); the snippet
@@ -650,7 +697,7 @@ function formatDateInput(date) {
 }
 
 function formatDateDisplay(date) {
-  return date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  return date.toLocaleDateString(appLocale(), { day: "numeric", month: "short", year: "numeric" });
 }
 
 function sameDay(a, b) {
@@ -672,7 +719,7 @@ function renderCalendar() {
   const label = document.getElementById("calendar-month-label");
   const year = calendarState.viewMonth.getFullYear();
   const month = calendarState.viewMonth.getMonth();
-  label.textContent = calendarState.viewMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  label.textContent = calendarState.viewMonth.toLocaleDateString(appLocale(), { month: "long", year: "numeric" });
 
   const firstOfMonth = new Date(year, month, 1);
   const startOffset = firstOfMonth.getDay(); // 0 = Sunday, matches the Su-Sa header
@@ -845,7 +892,7 @@ function renderDelta(elementId, change, { lowerIsBetter = false } = {}) {
     const isGood = lowerIsBetter ? !increased : increased;
     sentiment = isGood ? "good" : "bad";
   }
-  el.textContent = `${arrow} ${Math.abs(change)}% vs previous period`;
+  el.textContent = `${arrow} ${Math.abs(change)}% ${t("vs_previous_period")}`;
   el.className = `card-delta ${sentiment}`;
 }
 
@@ -883,8 +930,8 @@ function formatBucketLabel(isoString) {
   const date = new Date(isoString);
   const isHourly = state.currentPeriod === "today" || state.currentPeriod === "yesterday";
   return isHourly
-    ? date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
-    : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    ? date.toLocaleTimeString(appLocale(), { hour: "2-digit", minute: "2-digit" })
+    : date.toLocaleDateString(appLocale(), { month: "short", day: "numeric" });
 }
 
 const CHART_WIDTH = 800;
@@ -909,7 +956,7 @@ function drawChart(buckets) {
     text.setAttribute("fill", "var(--text-muted)");
     text.setAttribute("font-family", "var(--font-body)");
     text.setAttribute("font-size", "14");
-    text.textContent = "No data for this period yet";
+    text.textContent = t("no_data_for_period");
     svg.appendChild(text);
     return;
   }
@@ -1075,11 +1122,11 @@ function renderTable(tableId, items, options = {}) {
     // request actually failed (see the console for the real error). Shown
     // in red so a broken panel is never silently indistinguishable from an
     // empty one.
-    tbody.innerHTML = `<tr><td class="label table-error" colspan="2">⚠ Failed to load — check console / retry</td></tr>`;
+    tbody.innerHTML = `<tr><td class="label table-error" colspan="2">${t("table_error")}</td></tr>`;
     return;
   }
   if (!items || items.length === 0) {
-    tbody.innerHTML = `<tr><td class="label table-empty" colspan="2">No data yet</td></tr>`;
+    tbody.innerHTML = `<tr><td class="label table-empty" colspan="2">${t("table_empty")}</td></tr>`;
     return;
   }
   tbody.innerHTML = items
@@ -1111,14 +1158,12 @@ function countryFlag(code) {
 }
 
 function countryName(code) {
-  if (code === "T1") return "Tor network";
-  if (code === "XX") return "Unknown";
+  if (code === "T1") return t("country_tor");
+  if (code === "XX") return t("country_unknown");
   try {
-    // Deliberately hardcoded to "en", not navigator.language — the rest of
-    // this dashboard's UI is English regardless of the admin's own browser
-    // language, so country names should be too, rather than randomly
-    // switching to whatever locale the viewer's browser happens to be set to.
-    return new Intl.DisplayNames(["en"], { type: "region" }).of(code.toUpperCase());
+    // Tied to the app's own selected language (see i18n.js), consistent
+    // with the rest of the UI.
+    return new Intl.DisplayNames([appLocale()], { type: "region" }).of(code.toUpperCase());
   } catch {
     return code;
   }
@@ -1164,12 +1209,7 @@ async function loadBreakdowns() {
   });
 
   const currentSite = state.sites.find((s) => s.id === state.currentSiteId);
-  // Defensive: older/mistyped data may have a domain stored with a protocol
-  // already in it (e.g. "https://example.com" instead of "example.com").
-  // Strip it here so links never end up double-prefixed, regardless of
-  // what's actually in the database right now.
-  const cleanDomain = currentSite ? currentSite.domain.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").replace(/\/.*$/, "") : "";
-  const siteOrigin = cleanDomain ? `https://${cleanDomain}` : "";
+  const siteOrigin = currentSite ? `https://${cleanDomain(currentSite.domain)}` : "";
 
   renderTable("table-pages", data.pages, {
     // visits.url is stored as a normalized path (e.g. "/blog/post"), not a full
@@ -1201,8 +1241,8 @@ async function loadBreakdowns() {
   renderTable("table-devices", data.devices);
   renderTable("table-campaigns", data.campaigns);
   renderTable("table-events", data.events, {
-    formatLabel: (label) => EVENT_LABELS[label] || label,
-    titleFor: (label) => EVENT_LABELS[label] || label,
+    formatLabel: (label) => eventLabel(label),
+    titleFor: (label) => eventLabel(label),
   });
   renderTable("table-bots", data.bots);
   renderTable("table-search-queries", data.searchQueries);

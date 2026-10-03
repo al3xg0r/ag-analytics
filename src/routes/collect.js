@@ -12,7 +12,7 @@ export async function handleCollect(request, env) {
     return json({ error: "Invalid JSON body" }, 400);
   }
 
-  const { site, url, title, referrer, screen, language, timezone } = body;
+  const { site, url, title, referrer, screen, language, timezone, browserOverride } = body;
   if (!site || !url) {
     return json({ error: "site and url are required" }, 400);
   }
@@ -95,7 +95,12 @@ export async function handleCollect(request, env) {
     utmCampaign: utm.utmCampaign,
     utmTerm: utm.utmTerm,
     utmContent: utm.utmContent,
-    browser: parseBrowser(userAgent),
+    // Brave can only ever be detected client-side (see widget.js) since it
+    // deliberately makes its User-Agent identical to Chrome's — trust it
+    // only if it's exactly this one known value, never anything else the
+    // caller might send, so this never becomes a way to inject an arbitrary
+    // string into the Browsers panel.
+    browser: browserOverride === "Brave" ? "Brave" : parseBrowser(userAgent),
     os: parseOS(userAgent),
     deviceType: parseDeviceType(userAgent),
     screenResolution: screen || null,

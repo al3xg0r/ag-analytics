@@ -17,13 +17,13 @@
   <main id="view-setup" class="auth-view hidden">
     <div class="auth-card">
       <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
-      <h1>Create your admin account</h1>
-      <p class="muted">This runs once. After this, use the login screen.</p>
+      <h1 data-i18n="setup_title">Create your admin account</h1>
+      <p class="muted" data-i18n="setup_subtitle">This runs once. After this, use the login screen.</p>
       <form id="form-setup">
-        <label>Login<input type="text" name="login" required autocomplete="username" /></label>
-        <label>Password<input type="password" name="password" required minlength="8" autocomplete="new-password" /></label>
-        <label>Email (optional)<input type="email" name="email" autocomplete="email" /></label>
-        <button type="submit">Create admin</button>
+        <label><span data-i18n="label_login">Login</span><input type="text" name="login" required autocomplete="username" /></label>
+        <label><span data-i18n="label_password">Password</span><input type="password" name="password" required minlength="8" autocomplete="new-password" /></label>
+        <label><span data-i18n="label_email_optional">Email (optional)</span><input type="email" name="email" autocomplete="email" /></label>
+        <button type="submit" data-i18n="btn_create_admin">Create admin</button>
         <p class="form-error" id="setup-error"></p>
       </form>
     </div>
@@ -33,11 +33,11 @@
   <main id="view-login" class="auth-view hidden">
     <div class="auth-card">
       <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
-      <h1>Sign in</h1>
+      <h1 data-i18n="login_title">Sign in</h1>
       <form id="form-login">
-        <label>Login<input type="text" name="login" required autocomplete="username" /></label>
-        <label>Password<input type="password" name="password" required autocomplete="current-password" /></label>
-        <button type="submit">Sign in</button>
+        <label><span data-i18n="label_login">Login</span><input type="text" name="login" required autocomplete="username" /></label>
+        <label><span data-i18n="label_password">Password</span><input type="password" name="password" required autocomplete="current-password" /></label>
+        <button type="submit" data-i18n="btn_sign_in">Sign in</button>
         <p class="form-error" id="login-error"></p>
       </form>
     </div>
@@ -56,39 +56,39 @@
       <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
 
       <div class="sidebar-section">
-        <div class="sidebar-label">Site</div>
+        <div class="sidebar-label" data-i18n="sidebar_site">Site</div>
         <div class="site-picker">
           <button type="button" id="site-picker-button" class="site-picker-button">
-            <span id="site-picker-current">Loading…</span>
+            <span id="site-picker-current" data-i18n="loading">Loading…</span>
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           <div id="site-picker-list" class="site-picker-list hidden"></div>
         </div>
-        <button id="btn-add-site" class="btn-ghost small full-width">+ Add site</button>
+        <button id="btn-add-site" class="btn-ghost small full-width" data-i18n="btn_add_site">+ Add site</button>
         <div class="site-actions">
-          <button id="btn-view-code" class="btn-ghost small">&lt;/&gt; Code</button>
-          <button id="btn-edit-domain" class="btn-ghost small" title="Edit this site's name or domain">✎ Edit</button>
-          <button id="btn-delete-site" class="btn-ghost small danger" title="Delete the selected site">Delete</button>
+          <button id="btn-view-code" class="btn-ghost small" data-i18n="btn_code">&lt;/&gt; Code</button>
+          <button id="btn-edit-domain" class="btn-ghost small" data-i18n="btn_edit" data-i18n-title="btn_edit_title" title="Edit this site's name or domain">✎ Edit</button>
+          <button id="btn-delete-site" class="btn-ghost small danger" data-i18n="btn_delete" data-i18n-title="btn_delete_title" title="Delete the selected site">Delete</button>
         </div>
-        <button id="btn-customize" class="btn-ghost small full-width" title="Choose which panels to show">⚙ Customize</button>
+        <button id="btn-customize" class="btn-ghost small full-width" data-i18n="btn_customize" data-i18n-title="btn_customize_title" title="Choose which panels to show">⚙ Customize</button>
       </div>
 
       <div class="sidebar-section">
-        <div class="sidebar-label">Period</div>
+        <div class="sidebar-label" data-i18n="sidebar_period">Period</div>
         <div class="period-tabs" id="period-tabs">
-          <button data-period="today" class="active">Today</button>
-          <button data-period="yesterday">Yesterday</button>
-          <button data-period="7d">7 days</button>
-          <button data-period="30d">30 days</button>
-          <button data-period="12m">12 months</button>
-          <button data-period="all">All time</button>
-          <button data-period="custom">Custom range</button>
+          <button data-period="today" class="active" data-i18n="period_today">Today</button>
+          <button data-period="yesterday" data-i18n="period_yesterday">Yesterday</button>
+          <button data-period="7d" data-i18n="period_7d">7 days</button>
+          <button data-period="30d" data-i18n="period_30d">30 days</button>
+          <button data-period="12m" data-i18n="period_12m">12 months</button>
+          <button data-period="all" data-i18n="period_all">All time</button>
+          <button data-period="custom" data-i18n="period_custom">Custom range</button>
         </div>
         <form id="form-custom-range" class="custom-range hidden">
           <div class="range-summary">
-            <span id="range-summary-start">Pick start date</span>
+            <span id="range-summary-start" data-i18n="pick_start_date">Pick start date</span>
             <span class="range-summary-arrow">→</span>
-            <span id="range-summary-end">Pick end date</span>
+            <span id="range-summary-end" data-i18n="pick_end_date">Pick end date</span>
           </div>
           <div class="calendar-header">
             <button type="button" id="btn-cal-prev" class="btn-ghost small" aria-label="Previous month">‹</button>
@@ -96,19 +96,29 @@
             <button type="button" id="btn-cal-next" class="btn-ghost small" aria-label="Next month">›</button>
           </div>
           <div class="calendar-weekdays">
-            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            <span data-i18n="day_su">Su</span><span data-i18n="day_mo">Mo</span><span data-i18n="day_tu">Tu</span><span data-i18n="day_we">We</span><span data-i18n="day_th">Th</span><span data-i18n="day_fr">Fr</span><span data-i18n="day_sa">Sa</span>
           </div>
           <div class="calendar-grid" id="calendar-grid"></div>
-          <button type="submit" class="btn-primary small full-width" id="btn-apply-custom-range" disabled>Apply</button>
+          <button type="submit" class="btn-primary small full-width" id="btn-apply-custom-range" data-i18n="btn_apply" disabled>Apply</button>
         </form>
       </div>
 
       <div class="sidebar-footer">
-        <button id="btn-theme" class="btn-ghost small">Toggle theme</button>
-        <button id="btn-logout" class="btn-ghost small">Log out</button>
+        <button id="btn-theme" class="btn-ghost small" data-i18n="btn_toggle_theme">Toggle theme</button>
+        <div class="lang-picker">
+          <button type="button" id="lang-picker-button" class="btn-ghost small full-width">
+            <span id="lang-picker-current">EN</span>
+          </button>
+          <div id="lang-picker-list" class="lang-picker-list hidden">
+            <button type="button" class="lang-picker-option" data-lang="en">English</button>
+            <button type="button" class="lang-picker-option" data-lang="uk">Українська</button>
+            <button type="button" class="lang-picker-option" data-lang="ru">Русский</button>
+          </div>
+        </div>
+        <button id="btn-logout" class="btn-ghost small" data-i18n="btn_logout">Log out</button>
         <div class="footer-meta">
           <a id="app-version" class="version-tag" href="https://github.com/al3xg0r/ag-analytics" target="_blank" rel="noopener noreferrer"></a>
-          <a class="contact-link" href="mailto:github.reward115@passfwd.com" title="Contact / report an issue">
+          <a class="contact-link" href="mailto:github.reward115@passfwd.com" data-i18n-title="contact_title" title="Contact / report an issue">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <path d="m2 7 10 6 10-6" />
@@ -121,8 +131,8 @@
     <main class="content">
       <header class="content-header">
         <h1 id="site-name">
-          <img id="site-favicon" class="site-favicon hidden" alt="" /><span id="site-name-text">—</span>
-          <button type="button" id="btn-refresh" class="btn-refresh" title="Refresh data">
+          <img id="site-favicon" class="site-favicon hidden" alt="" /><a id="site-name-text" href="#" target="_blank" rel="noopener noreferrer">—</a>
+          <button type="button" id="btn-refresh" class="btn-refresh" data-i18n-title="refresh_title" title="Refresh data">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 12a9 9 0 1 1-2.64-6.36" />
               <polyline points="21 3 21 9 15 9" />
@@ -132,29 +142,29 @@
         <div class="header-actions">
           <div class="online-indicator">
             <span class="pulse-dot"></span>
-            <span id="online-count">0</span> online now
+            <span id="online-count">0</span> <span data-i18n="online_now">online now</span>
           </div>
         </div>
       </header>
 
       <section class="stat-cards">
         <div class="card">
-          <div class="card-label">Unique visitors</div>
+          <div class="card-label" data-i18n="stat_unique_visitors">Unique visitors</div>
           <div class="card-value" id="stat-visitors">0</div>
           <div class="card-delta" id="delta-visitors"></div>
         </div>
         <div class="card">
-          <div class="card-label">Page views</div>
+          <div class="card-label" data-i18n="stat_page_views">Page views</div>
           <div class="card-value" id="stat-views">0</div>
           <div class="card-delta" id="delta-views"></div>
         </div>
         <div class="card">
-          <div class="card-label">Avg. time on site</div>
+          <div class="card-label" data-i18n="stat_avg_time">Avg. time on site</div>
           <div class="card-value" id="stat-time">0s</div>
           <div class="card-delta" id="delta-time"></div>
         </div>
         <div class="card">
-          <div class="card-label">Bounce rate</div>
+          <div class="card-label" data-i18n="stat_bounce_rate">Bounce rate</div>
           <div class="card-value" id="stat-bounce">0%</div>
           <div class="card-delta" id="delta-bounce"></div>
         </div>
@@ -163,10 +173,10 @@
       <section class="chart-panel">
         <div class="chart-legend" id="chart-legend">
           <button type="button" class="legend-item legend-views active" data-series="views">
-            <span class="legend-dot"></span>Views
+            <span class="legend-dot"></span><span data-i18n="legend_views">Views</span>
           </button>
           <button type="button" class="legend-item legend-visitors active" data-series="visitors">
-            <span class="legend-dot"></span>Visitors
+            <span class="legend-dot"></span><span data-i18n="legend_visitors">Visitors</span>
           </button>
         </div>
         <svg id="chart" viewBox="0 0 800 240" preserveAspectRatio="none"></svg>
@@ -175,48 +185,48 @@
 
       <section class="breakdown-grid" id="breakdown-grid">
         <div class="panel" data-panel="pages">
-          <div class="panel-title" draggable="true">Top pages</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_top_pages">Top pages</div>
           <div class="panel-scroll"><table id="table-pages"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="referrers">
-          <div class="panel-title" draggable="true">Referrers</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_referrers">Referrers</div>
           <div class="panel-scroll"><table id="table-referrers"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="search-engines">
-          <div class="panel-title" draggable="true">Search engines</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_search_engines">Search engines</div>
           <div class="panel-scroll"><table id="table-search-engines"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="campaigns">
-          <div class="panel-title" draggable="true">Campaigns</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_campaigns">Campaigns</div>
           <div class="panel-scroll"><table id="table-campaigns"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="countries">
-          <div class="panel-title" draggable="true">Countries</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_countries">Countries</div>
           <div class="panel-scroll"><table id="table-countries"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="browsers">
-          <div class="panel-title" draggable="true">Browsers</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_browsers">Browsers</div>
           <div class="panel-scroll"><table id="table-browsers"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="os">
-          <div class="panel-title" draggable="true">Operating systems</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_os">Operating systems</div>
           <div class="panel-scroll"><table id="table-os"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="devices">
-          <div class="panel-title" draggable="true">Devices</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_devices">Devices</div>
           <div class="panel-scroll"><table id="table-devices"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="events">
-          <div class="panel-title" draggable="true">Custom events</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_events">Custom events</div>
           <div class="panel-scroll"><table id="table-events"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="search-queries">
-          <div class="panel-title" draggable="true">Search queries</div>
-          <p class="panel-note">Google withholds the query for most organic clicks — this fills in mainly from Bing, DuckDuckGo &amp; co.</p>
+          <div class="panel-title" draggable="true" data-i18n="panel_search_queries">Search queries</div>
+          <p class="panel-note" data-i18n="panel_search_queries_note">Google withholds the query for most organic clicks — this fills in mainly from Bing, DuckDuckGo &amp; co.</p>
           <div class="panel-scroll"><table id="table-search-queries"><tbody></tbody></table></div>
         </div>
         <div class="panel" data-panel="bots">
-          <div class="panel-title" draggable="true">Bots &amp; crawlers</div>
+          <div class="panel-title" draggable="true" data-i18n="panel_bots">Bots &amp; crawlers</div>
           <div class="panel-scroll"><table id="table-bots"><tbody></tbody></table></div>
         </div>
       </section>
@@ -226,19 +236,19 @@
   <!-- Add site modal -->
   <div id="modal-add-site" class="modal hidden">
     <div class="modal-card">
-      <h2>Add a new site</h2>
+      <h2 data-i18n="modal_add_site_title">Add a new site</h2>
       <form id="form-add-site">
-        <label>Name<input type="text" name="name" required /></label>
-        <label>Domain<input type="text" name="domain" placeholder="example.com" required /></label>
+        <label><span data-i18n="label_name">Name</span><input type="text" name="name" required /></label>
+        <label><span data-i18n="label_domain">Domain</span><input type="text" name="domain" placeholder="example.com" required /></label>
         <div class="modal-actions">
-          <button type="button" id="btn-cancel-add-site" class="btn-ghost">Cancel</button>
-          <button type="submit">Create site</button>
+          <button type="button" id="btn-cancel-add-site" class="btn-ghost" data-i18n="btn_cancel">Cancel</button>
+          <button type="submit" data-i18n="btn_create_site">Create site</button>
         </div>
       </form>
       <div id="new-site-result" class="hidden">
-        <p>Site created. Paste this snippet before <code>&lt;/body&gt;</code>:</p>
+        <p><span data-i18n="paste_snippet_before_body_created">Site created. Paste this snippet before</span> <code>&lt;/body&gt;</code>:</p>
         <pre id="new-site-snippet"></pre>
-        <button id="btn-close-new-site" class="btn-primary">Done</button>
+        <button id="btn-close-new-site" class="btn-primary" data-i18n="btn_done">Done</button>
       </div>
     </div>
   </div>
@@ -246,12 +256,12 @@
   <!-- View tracking code modal (available any time, not just at creation) -->
   <div id="modal-view-code" class="modal hidden">
     <div class="modal-card">
-      <h2>Tracking code</h2>
-      <p class="muted">Paste this snippet on <span id="code-site-name">this site</span>, right before <code>&lt;/body&gt;</code>.</p>
+      <h2 data-i18n="modal_tracking_code_title">Tracking code</h2>
+      <p class="muted"><span data-i18n="paste_snippet_on">Paste this snippet on</span> <span id="code-site-name">this site</span><span data-i18n="right_before_body">, right before</span> <code>&lt;/body&gt;</code>.</p>
       <pre id="view-code-snippet"></pre>
       <div class="modal-actions">
-        <button type="button" id="btn-copy-code" class="btn-ghost">Copy</button>
-        <button type="button" id="btn-close-view-code" class="btn-primary">Done</button>
+        <button type="button" id="btn-copy-code" class="btn-ghost" data-i18n="btn_copy">Copy</button>
+        <button type="button" id="btn-close-view-code" class="btn-primary" data-i18n="btn_done">Done</button>
       </div>
     </div>
   </div>
@@ -259,15 +269,15 @@
   <!-- Edit site domain modal -->
   <div id="modal-edit-domain" class="modal hidden">
     <div class="modal-card">
-      <h2>Edit site</h2>
-      <p class="muted">Domain is used to build links in Top pages / Referrers, and to fetch the site favicon. Changing either doesn't affect already-collected data.</p>
+      <h2 data-i18n="modal_edit_site_title">Edit site</h2>
+      <p class="muted" data-i18n="modal_edit_site_desc">Domain is used to build links in Top pages / Referrers, and to fetch the site favicon. Changing either doesn't affect already-collected data.</p>
       <form id="form-edit-domain">
-        <label>Name<input type="text" name="name" placeholder="My site" required /></label>
-        <label>Domain<input type="text" name="domain" placeholder="example.com" required /></label>
+        <label><span data-i18n="label_name">Name</span><input type="text" name="name" placeholder="My site" required /></label>
+        <label><span data-i18n="label_domain">Domain</span><input type="text" name="domain" placeholder="example.com" required /></label>
         <p id="edit-domain-error" class="form-error"></p>
         <div class="modal-actions">
-          <button type="button" id="btn-cancel-edit-domain" class="btn-ghost">Cancel</button>
-          <button type="submit" class="btn-primary">Save</button>
+          <button type="button" id="btn-cancel-edit-domain" class="btn-ghost" data-i18n="btn_cancel">Cancel</button>
+          <button type="submit" class="btn-primary" data-i18n="btn_save">Save</button>
         </div>
       </form>
     </div>
@@ -276,27 +286,28 @@
   <!-- Customize panels modal -->
   <div id="modal-customize" class="modal hidden">
     <div class="modal-card">
-      <h2>Customize dashboard</h2>
-      <p class="muted">Choose which panels appear below the chart. Drag a panel by its title to reorder. Saved in this browser.</p>
+      <h2 data-i18n="modal_customize_title">Customize dashboard</h2>
+      <p class="muted" data-i18n="modal_customize_desc">Choose which panels appear below the chart. Drag a panel by its title to reorder. Saved in this browser.</p>
       <form id="form-customize">
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="pages" checked /> Top pages</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="referrers" checked /> Referrers</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="search-engines" checked /> Search engines</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="campaigns" checked /> Campaigns</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="countries" checked /> Countries</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="browsers" checked /> Browsers</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="os" checked /> Operating systems</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="devices" checked /> Devices</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="events" checked /> Custom events</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="bots" checked /> Bots &amp; crawlers</label>
-        <label class="checkbox-row"><input type="checkbox" name="panel" value="search-queries" checked /> Search queries</label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="pages" checked /> <span data-i18n="panel_top_pages">Top pages</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="referrers" checked /> <span data-i18n="panel_referrers">Referrers</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="search-engines" checked /> <span data-i18n="panel_search_engines">Search engines</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="campaigns" checked /> <span data-i18n="panel_campaigns">Campaigns</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="countries" checked /> <span data-i18n="panel_countries">Countries</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="browsers" checked /> <span data-i18n="panel_browsers">Browsers</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="os" checked /> <span data-i18n="panel_os">Operating systems</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="devices" checked /> <span data-i18n="panel_devices">Devices</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="events" checked /> <span data-i18n="panel_events">Custom events</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="bots" checked /> <span data-i18n="panel_bots">Bots &amp; crawlers</span></label>
+        <label class="checkbox-row"><input type="checkbox" name="panel" value="search-queries" checked /> <span data-i18n="panel_search_queries">Search queries</span></label>
         <div class="modal-actions">
-          <button type="button" id="btn-close-customize" class="btn-primary">Done</button>
+          <button type="button" id="btn-close-customize" class="btn-primary" data-i18n="btn_done">Done</button>
         </div>
       </form>
     </div>
   </div>
 
+  <script src="/i18n.js"></script>
   <script src="/app.js"></script>
   <!-- AG Analytics tracking its own dashboard traffic. Relative src on
        purpose (no hardcoded domain) — keeps working automatically through
