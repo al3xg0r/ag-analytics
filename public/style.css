@@ -304,7 +304,7 @@ form > button[type="submit"] {
   gap: 8px;
   margin-top: 10px;
 }
-.site-actions button { width: 100%; }
+.site-actions button { width: 100%; white-space: nowrap; padding-left: 4px; padding-right: 4px; }
 .full-width { width: 100%; margin-top: 10px; }
 
 .period-tabs { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }

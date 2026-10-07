@@ -214,10 +214,17 @@ document.getElementById("lang-picker-list").addEventListener("click", async (e) 
   setLanguage(option.dataset.lang);
   updateLangPickerLabel();
   document.getElementById("lang-picker-list").classList.add("hidden");
-  // Re-render anything already on screen whose text was generated in JS
-  // (empty/error states, deltas, event labels, country names, calendar
-  // month) rather than set via data-i18n, so switching language updates
-  // everything immediately, not just the static chrome.
+  // applyTranslations() (inside setLanguage) just overwrote EVERY
+  // [data-i18n] element, including ones that are normally kept up to date
+  // by JS after boot (the site picker's current name, the custom-range
+  // summary) — those carry a data-i18n attribute only for their initial
+  // placeholder text, so they need to be explicitly restored to their real
+  // current value here, or a language switch would wipe them back to the
+  // placeholder and never recover.
+  const currentSite = state.sites.find((s) => s.id === state.currentSiteId);
+  updateSiteNameLink(currentSite);
+  renderSitePickerList();
+  updateRangeSummary();
   if (state.currentSiteId) await refreshAll();
   if (!document.getElementById("form-custom-range").classList.contains("hidden")) renderCalendar();
 });
