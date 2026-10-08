@@ -90,12 +90,11 @@ html, body {
   margin-bottom: 24px;
 }
 
-.brand-mark {
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: block;
 }
 
 h1 {
@@ -306,15 +305,14 @@ form > button[type="submit"] {
 }
 .site-actions button {
   width: 100%;
-  font-size: 11px;
-  padding: 6px 4px;
-  white-space: normal;
-  line-height: 1.25;
+  padding: 0;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
 }
+
+.site-actions .btn-icon svg { display: block; }
 .full-width { width: 100%; margin-top: 10px; }
 
 .period-tabs { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }

@@ -7,6 +7,7 @@
   <meta name="description" content="Lightweight, privacy-first, serverless analytics" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/style.css" />
@@ -16,7 +17,7 @@
   <!-- First-run setup screen: creates the very first admin account -->
   <main id="view-setup" class="auth-view hidden">
     <div class="auth-card">
-      <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
+      <div class="brand"><img class="brand-logo" src="/logo.png" alt="" width="26" height="26" />Analytics</div>
       <h1 data-i18n="setup_title">Create your admin account</h1>
       <p class="muted" data-i18n="setup_subtitle">This runs once. After this, use the login screen.</p>
       <form id="form-setup">
@@ -32,7 +33,7 @@
   <!-- Login screen -->
   <main id="view-login" class="auth-view hidden">
     <div class="auth-card">
-      <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
+      <div class="brand"><img class="brand-logo" src="/logo.png" alt="" width="26" height="26" />Analytics</div>
       <h1 data-i18n="login_title">Sign in</h1>
       <form id="form-login">
         <label><span data-i18n="label_login">Login</span><input type="text" name="login" required autocomplete="username" /></label>
@@ -49,11 +50,11 @@
       <button type="button" id="btn-mobile-menu" class="btn-hamburger" aria-label="Open menu">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
       </button>
-      <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
+      <div class="brand"><img class="brand-logo" src="/logo.png" alt="" width="26" height="26" />Analytics</div>
     </div>
     <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
     <aside class="sidebar" id="sidebar">
-      <div class="brand"><span class="brand-mark"></span>AG Analytics</div>
+      <div class="brand"><img class="brand-logo" src="/logo.png" alt="" width="26" height="26" />Analytics</div>
 
       <div class="sidebar-section">
         <div class="sidebar-label" data-i18n="sidebar_site">Site</div>
@@ -66,9 +67,9 @@
         </div>
         <button id="btn-add-site" class="btn-ghost small full-width" data-i18n="btn_add_site">+ Add site</button>
         <div class="site-actions">
-          <button id="btn-view-code" class="btn-ghost small" data-i18n="btn_code">&lt;/&gt; Code</button>
-          <button id="btn-edit-domain" class="btn-ghost small" data-i18n="btn_edit" data-i18n-title="btn_edit_title" title="Edit this site's name or domain">✎ Edit</button>
-          <button id="btn-delete-site" class="btn-ghost small danger" data-i18n="btn_delete" data-i18n-title="btn_delete_title" title="Delete the selected site">Delete</button>
+          <button id="btn-view-code" class="btn-ghost small btn-icon" title="Tracking code" aria-label="Tracking code"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg></button>
+          <button id="btn-edit-domain" class="btn-ghost small btn-icon" title="Edit site" aria-label="Edit site"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg></button>
+          <button id="btn-delete-site" class="btn-ghost small danger btn-icon" title="Delete site" aria-label="Delete site"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg></button>
         </div>
         <button id="btn-customize" class="btn-ghost small full-width" data-i18n="btn_customize" data-i18n-title="btn_customize_title" title="Choose which panels to show">⚙ Customize</button>
       </div>
