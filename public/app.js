@@ -9,7 +9,7 @@ const PANELS_KEY = "ag_visible_panels";
 const PANEL_ORDER_KEY = "ag_panel_order";
 const SITE_ORDER_KEY = "ag_site_order";
 const CURRENT_SITE_KEY = "ag_current_site";
-const ALL_PANELS = ["pages", "referrers", "search-engines", "search-queries", "campaigns", "countries", "browsers", "os", "devices", "events", "bots"];
+const ALL_PANELS = ["pages", "referrers", "search-engines", "search-queries", "campaigns", "countries", "browsers", "os", "devices", "screens", "events", "bots"];
 
 // Internal event names get a plain-English label in the Custom events panel
 // instead of showing the raw snake_case name. "non_web_request" specifically
@@ -572,10 +572,22 @@ document.getElementById("form-edit-domain").addEventListener("submit", async (e)
 
 // ---------- customize which breakdown panels are shown ----------
 
+// Remembers every panel that existed the last time the user saved their
+// layout. A panel that's missing from the saved "visible" list is either one
+// the user deliberately hid, or one that didn't exist yet when they last
+// saved. Comparing against this list tells the two apart, so a newly added
+// panel shows up for everyone without un-hiding anything the user chose to
+// hide.
+const PANELS_KNOWN_KEY = "ag_visible_panels_known";
+
 function getVisiblePanels() {
   try {
     const stored = JSON.parse(localStorage.getItem(PANELS_KEY));
-    if (Array.isArray(stored)) return stored;
+    if (Array.isArray(stored)) {
+      const known = JSON.parse(localStorage.getItem(PANELS_KNOWN_KEY) || "null");
+      const brandNew = known ? ALL_PANELS.filter((p) => !known.includes(p)) : [];
+      return [...stored, ...brandNew];
+    }
   } catch {
     // fall through to default
   }
@@ -678,6 +690,7 @@ document.getElementById("form-customize").addEventListener("change", (e) => {
     (el) => el.value
   );
   localStorage.setItem(PANELS_KEY, JSON.stringify(checked));
+  localStorage.setItem(PANELS_KNOWN_KEY, JSON.stringify(ALL_PANELS));
   applyVisiblePanels();
 });
 
@@ -1193,6 +1206,7 @@ async function loadBreakdowns() {
     browsers: `/browsers?${q}`,
     os: `/devices?${q}&dimension=os`,
     devices: `/devices?${q}&dimension=device_type`,
+    screens: `/devices?${q}&dimension=screen_resolution`,
     campaigns: `/campaigns?${q}`,
     events: `/events?${q}`,
     bots: `/bots?${q}`,
@@ -1246,6 +1260,7 @@ async function loadBreakdowns() {
   renderTable("table-browsers", data.browsers);
   renderTable("table-os", data.os);
   renderTable("table-devices", data.devices);
+  renderTable("table-screens", data.screens);
   renderTable("table-campaigns", data.campaigns);
   renderTable("table-events", data.events, {
     formatLabel: (label) => eventLabel(label),
